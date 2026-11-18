@@ -6,7 +6,10 @@ namespace AFKTrial
     public sealed class TrialRunner : MonoBehaviour
     {
         private TrialBattle battle;
-        private readonly Texture2D[] portraits = new Texture2D[TrialBattle.Heroes.Count];
+        private IceKnightRig iceKnight;
+        private Texture2D[] portraits;
+        private Texture2D hitFlash;
+        private string loadError;
         private readonly int[] draft = new int[3];
         private bool editing;
         private int selectedSlot;
@@ -28,22 +31,40 @@ namespace AFKTrial
         {
             if (battle != null) return;
             sideBattle = gameObject.scene.name == "SideBattle";
-            for (int i = 0; i < portraits.Length; i++)
+            try
             {
-                string key = i == 0 ? "IceKnightIdle" : TrialBattle.Heroes[i].Replace(" ", "");
-                portraits[i] = Resources.Load<Texture2D>(key);
+                var data = TrialData.Load();
+                portraits = new Texture2D[data.Heroes.Count];
+                for (int i = 0; i < portraits.Length; i++)
+                    portraits[i] = LoadTexture(data.Heroes[i].Portrait);
+                hitFlash = LoadTexture(data.HitTexture);
+                iceKnight = new IceKnightRig();
+                battle = new TrialBattle(data, iceKnight.ImpactTime);
+                loadError = null;
             }
-            battle = new TrialBattle();
+            catch (System.Exception error)
+            {
+                loadError = error.Message;
+                Debug.LogException(error);
+                return;
+            }
             accumulator = restartDelay = 0;
+        }
+
+        private static Texture2D LoadTexture(string key)
+        {
+            var texture = Resources.Load<Texture2D>(key);
+            if (texture == null) throw new System.IO.InvalidDataException("Missing texture in Resources: " + key);
+            return texture;
         }
 
         private void Update()
         {
-            if (paused || editing) return;
+            if (battle == null || paused || editing) return;
             if (battle.Finished)
             {
                 restartDelay += Time.deltaTime;
-                if (restartDelay >= 1.5f) { battle.StartBattle(); restartDelay = 0; }
+                if (restartDelay >= battle.Data.RestartDelay) { battle.StartBattle(); restartDelay = 0; }
                 return;
             }
             accumulator += Time.deltaTime;
@@ -54,7 +75,11 @@ namespace AFKTrial
 
         private void OnGUI()
         {
-            if (battle == null) return;
+            if (battle == null)
+            {
+                if (loadError != null) GUI.Box(new Rect(12, 12, Screen.width - 24, 100), "Data loading failed\n" + loadError);
+                return;
+            }
             if (title == null)
             {
                 title = new GUIStyle(GUI.skin.label) { fontSize = 27, fontStyle = FontStyle.Bold };
@@ -86,7 +111,7 @@ namespace AFKTrial
             }
             Fill(new Rect(0, 0, 540, 960), new Color(0.055f, 0.08f, 0.13f));
             GUI.Label(new Rect(24, 20, 500, 40), "AFK TRIAL / FUNCTION TEST", title);
-            GUI.Label(new Rect(24, 66, 500, 28), TrialBattle.StageName(battle.Stage) +
+            GUI.Label(new Rect(24, 66, 500, 28), battle.StageName(battle.Stage) +
                 (battle.Farming ? "  [FARM]" : "  [CHALLENGE]"), label);
             GUI.Label(new Rect(24, 100, 500, 28), "Gold " + battle.Gold + "    XP " + battle.Experience +
                 "    Team Lv." + battle.Level, label);
@@ -105,6 +130,7 @@ namespace AFKTrial
                     bool hit = battle.Elapsed - unit.LastHitTime < 0.15f;
                     Fill(new Rect(x - 24, y - 24, 48, 48), hit ? Color.white : color);
                 }
+                DrawHitFlash(unit, x, y, battle.Data.PortraitSize);
                 float infoX = x - 39;
                 Fill(new Rect(infoX, y - 40, 78, 7), Color.black);
                 Fill(new Rect(infoX, y - 40, 78 * unit.Hp / unit.MaxHp, 7), Color.green);
@@ -116,7 +142,7 @@ namespace AFKTrial
             GUI.enabled = battle.Gold >= battle.Cost && battle.Experience >= battle.XpCost;
             if (GUI.Button(new Rect(24, 690, 492, 48), "Team level +1   /   " + battle.Cost + " G + " + battle.XpCost + " XP", button)) battle.Upgrade();
             GUI.enabled = battle.Farming;
-            if (GUI.Button(new Rect(24, 748, 492, 48), "Retry: " + TrialBattle.StageName(battle.Next), button))
+            if (GUI.Button(new Rect(24, 748, 492, 48), "Retry: " + battle.StageName(battle.Next), button))
             { battle.Retry(); accumulator = 0; restartDelay = 0; }
             GUI.enabled = true;
             if (GUI.Button(new Rect(24, 806, 238, 44), paused ? "Resume" : "Pause", button)) paused = !paused;
@@ -134,7 +160,7 @@ namespace AFKTrial
             Fill(new Rect(0, 0, 960, 540), new Color(0.055f, 0.08f, 0.13f));
             GUI.Label(new Rect(18, 8, 295, 38), "AFK TRIAL", title);
             if (GUI.Button(new Rect(830, 10, 115, 35), "Formation", button)) OpenFormation();
-            GUI.Label(new Rect(184, 12, 345, 32), TrialBattle.StageName(battle.Stage) +
+            GUI.Label(new Rect(184, 12, 345, 32), battle.StageName(battle.Stage) +
                 (battle.Farming ? "  [FARM]" : "  [CHALLENGE]"), label);
             GUI.Label(new Rect(540, 12, 286, 32), $"Gold {battle.Gold}    XP {battle.Experience}    Team Lv.{battle.Level}", label);
             Fill(new Rect(122, 58, 716, 358), new Color(0.09f, 0.14f, 0.21f));
@@ -150,6 +176,7 @@ namespace AFKTrial
                     bool hit = battle.Elapsed - unit.LastHitTime < 0.15f;
                     Fill(new Rect(x - 24, y - 24, 48, 48), !unit.Alive ? Color.gray : hit ? Color.white : team);
                 }
+                DrawHitFlash(unit, x, y, battle.Data.LandscapeSize);
                 float panelX = unit.Ally ? 12 : 848;
                 float panelY = 350 - (i % 3) * 113;
                 GUI.Label(new Rect(panelX, panelY - 34, 112, 34), unit.Name, small);
@@ -164,7 +191,7 @@ namespace AFKTrial
             GUI.enabled = battle.Gold >= battle.Cost && battle.Experience >= battle.XpCost;
             if (GUI.Button(new Rect(16, 470, 320, 50), $"Team level +1 / {battle.Cost} G + {battle.XpCost} XP", button)) battle.Upgrade();
             GUI.enabled = battle.Farming;
-            if (GUI.Button(new Rect(348, 470, 260, 50), "Retry: " + TrialBattle.StageName(battle.Next), button))
+            if (GUI.Button(new Rect(348, 470, 260, 50), "Retry: " + battle.StageName(battle.Next), button))
             { battle.Retry(); accumulator = 0; restartDelay = 0; }
             GUI.enabled = true;
             if (GUI.Button(new Rect(620, 470, 120, 50), paused ? "Resume" : "Pause", button)) paused = !paused;
@@ -177,7 +204,8 @@ namespace AFKTrial
         {
             Color previous = GUI.color;
             GUI.color = unit.Alive ? Color.white : Color.gray;
-            GUI.DrawTexture(area, portraits[battle.HeroAt(slot)], ScaleMode.ScaleToFit);
+            if (unit.Stats.Animation == "ice_knight") iceKnight.Draw(area, unit, battle.Elapsed);
+            else GUI.DrawTexture(area, portraits[battle.HeroAt(slot)], ScaleMode.ScaleToFit);
             GUI.color = previous;
         }
 
@@ -197,7 +225,7 @@ namespace AFKTrial
             for (int i = 0; i < draft.Length; i++)
             {
                 var rect = new Rect(20 + i * (slotWidth + 6), 90, slotWidth, 54);
-                if (GUI.Toggle(rect, selectedSlot == i, $"Slot {i + 1}  /  {TrialBattle.Heroes[draft[i]]}", button))
+                if (GUI.Toggle(rect, selectedSlot == i, $"Slot {i + 1}  /  {battle.Heroes[draft[i]]}", button))
                     selectedSlot = i;
             }
             int columns = sideBattle ? 5 : 2;
@@ -218,7 +246,7 @@ namespace AFKTrial
                     portraits[hero], ScaleMode.ScaleToFit);
                 string prefix = occupied < 0 ? "" : $"[{occupied + 1}] ";
                 GUI.Label(new Rect(x + 8, y + cardHeight - 28, cardWidth - 12, 24),
-                    prefix + TrialBattle.Heroes[hero], small);
+                    prefix + battle.Heroes[hero], small);
             }
             if (GUI.Button(new Rect(20, height - 60, 120, 42), "Cancel", button)) editing = false;
             if (GUI.Button(new Rect(width - 245, height - 60, 225, 42), "Apply & restart battle", button))
@@ -227,6 +255,18 @@ namespace AFKTrial
                 accumulator = restartDelay = 0;
                 editing = false;
             }
+        }
+
+        private void DrawHitFlash(TrialBattle.Unit unit, float x, float y, float size)
+        {
+            if (unit.LastDamage <= 0 || Event.current.type != EventType.Repaint) return;
+            var data = battle.Data;
+            float age = battle.Elapsed + restartDelay - unit.LastHitTime;
+            int frame = Mathf.FloorToInt(age * data.HitFps);
+            if (frame < 0 || frame >= data.HitFrames) return;
+            var uv = new Rect((frame % data.HitColumns) / (float)data.HitColumns,
+                1 - (frame / data.HitColumns + 1f) / data.HitRows, 1f / data.HitColumns, 1f / data.HitRows);
+            GUI.DrawTextureWithTexCoords(new Rect(x - size / 2, y - size / 2, size, size), hitFlash, uv);
         }
 
         private void DrawDamage(TrialBattle.Unit unit, float x, float headY)

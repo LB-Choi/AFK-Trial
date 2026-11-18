@@ -8,30 +8,39 @@ namespace AFKTrial.Editor
     internal static class TrialChecks
     {
         [InitializeOnLoadMethod]
-        private static void OnReload() { EditorApplication.delayCall += Run; }
+        private static void OnReload() { EditorApplication.delayCall += ValidateLiveTables; }
+
+        private static void ValidateLiveTables()
+        {
+            TrialData.Load();
+        }
 
         [MenuItem("AFK Trial/Run Model Checks")]
         public static void Run()
         {
             try
             {
-                var roster = new TrialBattle();
-                for (int hero = 0; hero < TrialBattle.Heroes.Count; hero++)
+                ValidateLiveTables();
+                var fixture = new TrialData(Path.Combine(Application.dataPath, "Editor/TrialChecksData~"));
+                var rig = new IceKnightRig();
+                TrialBattle NewBattle() => new TrialBattle(fixture, rig.ImpactTime);
+                var roster = NewBattle();
+                for (int hero = 0; hero < roster.Heroes.Count; hero++)
                 {
-                    int count = TrialBattle.Heroes.Count;
+                    int count = roster.Heroes.Count;
                     int[] party = { hero, (hero + 1) % count, (hero + 2) % count };
                     roster.ApplyFormation(party);
                     for (int frame = 0; frame < 60; frame++) roster.Tick(0.05f);
                     for (int slot = 0; slot < party.Length; slot++)
                     {
                         var unit = roster.Units[slot];
-                        Require(unit.Name == TrialBattle.Heroes[party[slot]] && unit.Position.x > -2 &&
+                        Require(unit.Name == roster.Heroes[party[slot]] && unit.Position.x > -2 &&
                             unit.Attacks > 0 && unit.Target.Hp < unit.Target.MaxHp, "roster member fights in selected slot");
                     }
                     roster.StartBattle();
-                    Require(roster.Units[0].Name == TrialBattle.Heroes[hero], "formation survives restart");
+                    Require(roster.Units[0].Name == roster.Heroes[hero], "formation survives restart");
                 }
-                var battle = new TrialBattle();
+                var battle = NewBattle();
                 Require(battle.Stage == 1 && battle.Units.Count == 6, "initial state");
                 UntilFinished(battle);
                 Require(battle.Highest == 1 && battle.Stage == 2 && battle.Gold == 45, "first win rewards / advance");
@@ -57,8 +66,8 @@ namespace AFKTrial.Editor
                 Require(battle.Stage == 0 && battle.Gold == gold, "practice floor / no loss reward");
                 battle.Retry();
                 Require(battle.Stage == 2 && !battle.Farming && !battle.Finished, "manual retry");
-                var lanes = new TrialBattle();
-                var attacker = lanes.Units[0];
+                var lanes = NewBattle();
+                var attacker = lanes.Units[1];
                 var target = lanes.Units[5];
                 attacker.Target = target;
                 float laneY = attacker.Position.y;
@@ -71,7 +80,7 @@ namespace AFKTrial.Editor
                     "attack across lanes using horizontal range");
                 Require(target.LastHitTime == lanes.Elapsed && Mathf.Approximately(target.LastDamage, target.MaxHp - target.Hp),
                     "floating damage matches HP loss");
-                var bossBattle = new TrialBattle();
+                var bossBattle = NewBattle();
                 for (int stage = 1; stage < 5; stage++)
                 {
                     foreach (var unit in bossBattle.Units)
@@ -82,12 +91,12 @@ namespace AFKTrial.Editor
                 Require(bossBattle.Units.Count == 6 && bossBattle.Units[4].Name == "BOSS" &&
                     bossBattle.Units[3].MaxHp < bossBattle.Units[4].MaxHp &&
                     bossBattle.Units[5].MaxHp == bossBattle.Units[3].MaxHp, "boss flanked by two regular enemies");
-                var wipe = new TrialBattle();
+                var wipe = NewBattle();
                 foreach (var unit in wipe.Units) unit.Hp = 0;
                 wipe.Tick(0.05f);
                 Require(wipe.Farming && wipe.Highest == 0 && wipe.Gold == 0, "simultaneous wipe loses");
-                Require(!new TrialBattle().Upgrade(), "insufficient resources rejected");
-                Require(TrialBattle.StageName(11) == "ROUND 2 / STAGE 1", "round display");
+                Require(!NewBattle().Upgrade(), "insufficient resources rejected");
+                Require(battle.StageName(11) == "ROUND 2 / STAGE 1", "round display");
                 Directory.CreateDirectory("Logs");
                 File.WriteAllText("Logs/TrialChecks.txt", "PASS: battle and 10-character formation checks\nUnity " + Application.unityVersion +
                     "\n" + DateTime.UtcNow.ToString("O") + "\nNot a Windows build or full game QA result.");

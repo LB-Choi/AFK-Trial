@@ -1,0 +1,191 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEngine;
+
+namespace AFKTrial
+{
+    public sealed class TrialData
+    {
+        public sealed class Fighter
+        {
+            public string Id, Name, Portrait, Animation;
+            public float Hp, Attack, HpPerLevel, AttackPerLevel, Speed, Range, Interval;
+        }
+
+        public readonly List<Fighter> Heroes = new List<Fighter>();
+        public readonly Dictionary<string, Fighter> Enemies = new Dictionary<string, Fighter>();
+        public readonly int[] StartingFormation = { -1, -1, -1 };
+        public readonly int RoundLength, BossEvery, BossSlot, PracticeGold, BaseGold, GoldPerStage,
+            PracticeXp, BaseXp, XpPerStage, FirstWinMultiplier, UpgradeGold, UpgradeXp;
+        public readonly float NormalSeconds, BossSeconds, PracticePower, BasePower, PowerPerStage,
+            SpawnDistance, LaneSpacing, RestartDelay;
+        public readonly string HitTexture;
+        public readonly int HitColumns, HitRows, HitFrames;
+        public readonly float HitFps, LandscapeSize, PortraitSize;
+
+        public static TrialData Load() => new TrialData(Path.Combine(Application.streamingAssetsPath, "Data"));
+
+        public TrialData(string directory)
+        {
+            var ids = new HashSet<string>();
+            foreach (var row in CsvRow.Read(directory, "Heroes"))
+            {
+                var hero = ReadFighter(row);
+                if (!ids.Add(hero.Id)) throw row.Error("duplicate id " + hero.Id);
+                hero.Portrait = row.Text("portrait");
+                hero.Animation = row.Text("animation", true);
+                if (hero.Animation != "" && hero.Animation != "ice_knight") throw row.Error("unknown animation " + hero.Animation);
+                hero.HpPerLevel = row.Number("hpPerLevel");
+                hero.AttackPerLevel = row.Number("attackPerLevel");
+                int slot = row.Integer("startingSlot");
+                if (slot > StartingFormation.Length) throw row.Error("startingSlot must be 0 to 3");
+                if (slot > 0)
+                {
+                    if (StartingFormation[slot - 1] >= 0) throw row.Error("duplicate startingSlot " + slot);
+                    StartingFormation[slot - 1] = Heroes.Count;
+                }
+                Heroes.Add(hero);
+            }
+            if (Array.IndexOf(StartingFormation, -1) >= 0)
+                throw new InvalidDataException("Heroes.csv requires one hero for each startingSlot 1, 2 and 3.");
+            foreach (var row in CsvRow.Read(directory, "Enemies"))
+            {
+                var enemy = ReadFighter(row);
+                if (Enemies.ContainsKey(enemy.Id)) throw row.Error("duplicate id " + enemy.Id);
+                Enemies.Add(enemy.Id, enemy);
+            }
+            if (!Enemies.ContainsKey("normal") || !Enemies.ContainsKey("boss"))
+                throw new InvalidDataException("Enemies.csv requires normal and boss.");
+            var p = CsvRow.Single(directory, "Progression");
+            RoundLength = p.Integer("roundLength", 1);
+            BossEvery = p.Integer("bossEvery", 1);
+            BossSlot = p.Integer("bossSlot", 1) - 1;
+            if (BossSlot >= StartingFormation.Length) throw p.Error("bossSlot must be 1 to 3");
+            NormalSeconds = p.Number("normalSeconds", true);
+            BossSeconds = p.Number("bossSeconds", true);
+            PracticePower = p.Number("practicePower", true);
+            BasePower = p.Number("basePower", true);
+            PowerPerStage = p.Number("powerPerStage");
+            PracticeGold = p.Integer("practiceGold");
+            BaseGold = p.Integer("baseGold");
+            GoldPerStage = p.Integer("goldPerStage");
+            PracticeXp = p.Integer("practiceXp");
+            BaseXp = p.Integer("baseXp");
+            XpPerStage = p.Integer("xpPerStage");
+            FirstWinMultiplier = p.Integer("firstWinMultiplier", 1);
+            UpgradeGold = p.Integer("upgradeGoldPerLevel");
+            UpgradeXp = p.Integer("upgradeXpPerLevel");
+            SpawnDistance = p.Number("spawnDistance", true);
+            LaneSpacing = p.Number("laneSpacing");
+            RestartDelay = p.Number("restartDelay");
+            var fx = CsvRow.Single(directory, "HitFlash");
+            HitTexture = fx.Text("texture");
+            HitColumns = fx.Integer("columns", 1);
+            HitRows = fx.Integer("rows", 1);
+            HitFrames = fx.Integer("frames", 1);
+            if (HitFrames > (long)HitColumns * HitRows) throw fx.Error("frames exceeds the sheet grid");
+            HitFps = fx.Number("fps", true);
+            LandscapeSize = fx.Number("landscapeSize", true);
+            PortraitSize = fx.Number("portraitSize", true);
+        }
+
+        private static Fighter ReadFighter(CsvRow row) => new Fighter {
+            Id = row.Text("id"), Name = row.Text("name"), Hp = row.Number("hp", true),
+            Attack = row.Number("attack"), Speed = row.Number("moveSpeed"), Range = row.Number("range"),
+            Interval = row.Number("attackInterval", true)
+        };
+    }
+
+    internal sealed class CsvRow
+    {
+        private readonly string location;
+        private readonly Dictionary<string, string> fields = new Dictionary<string, string>();
+        private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+
+        private CsvRow(string file, int record, string[] names, string[] values)
+        {
+            location = file + ", record " + record;
+            if (names.Length != values.Length) throw Error("unexpected number of fields");
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (names[i].Length == 0 || fields.ContainsKey(names[i])) throw Error("invalid column " + names[i]);
+                fields.Add(names[i], values[i]);
+            }
+        }
+
+        public InvalidDataException Error(string message) => new InvalidDataException(location + ": " + message);
+        public string Text(string key, bool allowEmpty = false)
+        {
+            if (!fields.TryGetValue(key, out var value) || (!allowEmpty && value.Length == 0)) throw Error("missing " + key);
+            return value;
+        }
+        public float Number(string key, bool positive = false)
+        {
+            if (!float.TryParse(Text(key), NumberStyles.Float, Invariant, out var n) ||
+                float.IsNaN(n) || float.IsInfinity(n) || n < 0 || (positive && n == 0))
+                throw Error("invalid " + key);
+            return n;
+        }
+        public int Integer(string key, int min = 0)
+        {
+            if (!int.TryParse(Text(key), NumberStyles.Integer, Invariant, out var n) || n < min) throw Error("invalid " + key);
+            return n;
+        }
+        public static CsvRow Single(string directory, string name)
+        {
+            var rows = Read(directory, name);
+            if (rows.Count != 1) throw new InvalidDataException(name + ".csv requires exactly one data row.");
+            return rows[0];
+        }
+        public static List<CsvRow> Read(string directory, string name)
+        {
+            string path = Path.Combine(directory, name + ".csv");
+            var rows = new List<CsvRow>();
+            string[] header = null;
+            foreach (var values in Records(File.ReadAllText(path, new UTF8Encoding(false, true)), path))
+            {
+                if (values.Length == 1 && values[0].Length == 0) continue;
+                if (header == null) header = values;
+                else rows.Add(new CsvRow(path, rows.Count + 2, header, values));
+            }
+            if (rows.Count == 0) throw new InvalidDataException(path + " has no data rows.");
+            return rows;
+        }
+        // Excel CSV permits escaped quotes, commas and CR/LF inside quoted cells.
+        private static IEnumerable<string[]> Records(string input, string path)
+        {
+            var cells = new List<string>();
+            var cell = new StringBuilder();
+            bool quoted = false, closed = false;
+            for (int i = 0; i <= input.Length; i++)
+            {
+                bool eof = i == input.Length;
+                char c = eof ? '\n' : input[i];
+                if (quoted)
+                {
+                    if (eof) throw new InvalidDataException(path + ": unterminated quoted field");
+                    if (c != '"') cell.Append(c);
+                    else if (i + 1 < input.Length && input[i + 1] == '"') { cell.Append('"'); i++; }
+                    else { quoted = false; closed = true; }
+                }
+                else if (c == ',' || c == '\r' || c == '\n')
+                {
+                    cells.Add(cell.ToString().Trim());
+                    cell.Clear();
+                    closed = false;
+                    if (c == ',') continue;
+                    if (c == '\r' && i + 1 < input.Length && input[i + 1] == '\n') i++;
+                    yield return cells.ToArray();
+                    cells.Clear();
+                }
+                else if (c == '"' && cell.Length == 0 && !closed) quoted = true;
+                else if (closed || c == '"') throw new InvalidDataException(path + ": unexpected character around quote");
+                else cell.Append(c);
+            }
+        }
+    }
+}
