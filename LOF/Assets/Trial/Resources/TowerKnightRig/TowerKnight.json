@@ -1,0 +1,221 @@
+{
+  "skeleton": {
+    "spine": "3.8.99",
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "root"
+    }
+  ],
+  "slots": [
+    {
+      "name": "pose",
+      "bone": "root"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "pose": {
+          "walk1": {
+            "x": 15.97,
+            "y": 154.53,
+            "height": 309.061,
+            "width": 223.576
+          },
+          "walk2": {
+            "x": 18.788,
+            "y": 152.652,
+            "height": 305.303,
+            "width": 219.818
+          },
+          "walk3": {
+            "x": 15.97,
+            "y": 151.712,
+            "height": 303.424,
+            "width": 223.576
+          },
+          "walk4": {
+            "x": 17.379,
+            "y": 153.591,
+            "height": 307.182,
+            "width": 222.636
+          },
+          "walk5": {
+            "x": 15.97,
+            "y": 155.47,
+            "height": 310.939,
+            "width": 223.576
+          },
+          "walk6": {
+            "x": 16.439,
+            "y": 152.652,
+            "height": 305.303,
+            "width": 224.515
+          },
+          "walk7": {
+            "x": 15.97,
+            "y": 151.712,
+            "height": 303.424,
+            "width": 223.576
+          },
+          "walk8": {
+            "x": 16.909,
+            "y": 152.182,
+            "height": 304.364,
+            "width": 225.455
+          },
+          "attack1": {
+            "x": 18.0,
+            "y": 155.0,
+            "height": 310.0,
+            "width": 202.0
+          },
+          "attack2": {
+            "x": 11.5,
+            "y": 146.5,
+            "height": 293.0,
+            "width": 233.0
+          },
+          "attack3": {
+            "x": 13.0,
+            "y": 141.0,
+            "height": 282.0,
+            "width": 244.0
+          },
+          "attack4": {
+            "x": 0.5,
+            "y": 139.5,
+            "height": 279.0,
+            "width": 283.0
+          },
+          "attack5": {
+            "x": 9.5,
+            "y": 130.5,
+            "height": 261.0,
+            "width": 333.0
+          },
+          "attack6": {
+            "x": 3.5,
+            "y": 132.5,
+            "height": 265.0,
+            "width": 311.0
+          },
+          "attack7": {
+            "x": 5.5,
+            "y": 140.5,
+            "height": 281.0,
+            "width": 263.0
+          },
+          "attack8": {
+            "x": 11.0,
+            "y": 153.0,
+            "height": 306.0,
+            "width": 210.0
+          }
+        }
+      }
+    }
+  ],
+  "events": {
+    "impact": {}
+  },
+  "animations": {
+    "walk": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "walk1"
+            },
+            {
+              "time": 0.1,
+              "name": "walk2"
+            },
+            {
+              "time": 0.15,
+              "name": "walk3"
+            },
+            {
+              "time": 0.25,
+              "name": "walk4"
+            },
+            {
+              "time": 0.35,
+              "name": "walk5"
+            },
+            {
+              "time": 0.45,
+              "name": "walk6"
+            },
+            {
+              "time": 0.55,
+              "name": "walk7"
+            },
+            {
+              "time": 0.6,
+              "name": "walk8"
+            },
+            {
+              "time": 0.7,
+              "name": "walk1"
+            }
+          ]
+        }
+      }
+    },
+    "attack": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "attack1"
+            },
+            {
+              "time": 0.1,
+              "name": "attack2"
+            },
+            {
+              "time": 0.2,
+              "name": "attack3"
+            },
+            {
+              "time": 0.35,
+              "name": "attack4"
+            },
+            {
+              "time": 0.45,
+              "name": "attack5"
+            },
+            {
+              "time": 0.55,
+              "name": "attack6"
+            },
+            {
+              "time": 0.7,
+              "name": "attack7"
+            },
+            {
+              "time": 0.85,
+              "name": "attack8"
+            },
+            {
+              "time": 0.95,
+              "name": "attack8"
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.45,
+          "name": "impact"
+        }
+      ]
+    }
+  }
+}
