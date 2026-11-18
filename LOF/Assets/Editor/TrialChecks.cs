@@ -41,6 +41,31 @@ namespace AFKTrial.Editor
                 Require(battle.Stage == 0 && battle.Gold == gold, "practice floor / no loss reward");
                 battle.Retry();
                 Require(battle.Stage == 2 && !battle.Farming && !battle.Finished, "manual retry");
+                var lanes = new TrialBattle();
+                var attacker = lanes.Units[0];
+                var target = lanes.Units[5];
+                attacker.Target = target;
+                float laneY = attacker.Position.y;
+                lanes.Tick(0.05f);
+                Require(attacker.Position.x > -2 && attacker.Position.y == laneY && attacker.Attacks == 0,
+                    "approach on X only while outside attack range");
+                attacker.Position.x = target.Position.x - 0.5f;
+                lanes.Tick(0.05f);
+                Require(attacker.Attacks == 1 && attacker.Position.y == laneY && target.Hp < target.MaxHp,
+                    "attack across lanes using horizontal range");
+                Require(target.LastHitTime == lanes.Elapsed && Mathf.Approximately(target.LastDamage, target.MaxHp - target.Hp),
+                    "floating damage matches HP loss");
+                var bossBattle = new TrialBattle();
+                for (int stage = 1; stage < 5; stage++)
+                {
+                    foreach (var unit in bossBattle.Units)
+                        if (!unit.Ally) unit.Hp = 0;
+                    bossBattle.Tick(0.05f);
+                    bossBattle.StartBattle();
+                }
+                Require(bossBattle.Units.Count == 6 && bossBattle.Units[4].Name == "BOSS" &&
+                    bossBattle.Units[3].MaxHp < bossBattle.Units[4].MaxHp &&
+                    bossBattle.Units[5].MaxHp == bossBattle.Units[3].MaxHp, "boss flanked by two regular enemies");
                 var wipe = new TrialBattle();
                 foreach (var unit in wipe.Units) unit.Hp = 0;
                 wipe.Tick(0.05f);
@@ -48,9 +73,9 @@ namespace AFKTrial.Editor
                 Require(!new TrialBattle().Upgrade(), "insufficient resources rejected");
                 Require(TrialBattle.StageName(11) == "ROUND 2 / STAGE 1", "round display");
                 Directory.CreateDirectory("Logs");
-                File.WriteAllText("Logs/TrialChecks.txt", "PASS: 13 model checks\nUnity " + Application.unityVersion +
+                File.WriteAllText("Logs/TrialChecks.txt", "PASS: 17 model checks\nUnity " + Application.unityVersion +
                     "\n" + DateTime.UtcNow.ToString("O") + "\nNot a Windows build or full game QA result.");
-                Debug.Log("[AFK Trial] PASS: 13 model checks. See Logs/TrialChecks.txt");
+                Debug.Log("[AFK Trial] PASS: 17 model checks. See Logs/TrialChecks.txt");
             }
             catch (Exception error)
             {

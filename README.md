@@ -4,8 +4,10 @@
 
 ## 테스트 실행
 
-1. `LOF/Assets/Scenes/SampleScene.unity`를 열고 코드 임포트가 끝날 때까지 기다린다.
-2. Unity Play 버튼을 누른다. SampleScene에서만 테스트 실행기가 자동 생성된다. 기본 씬 파일을 수정하거나 컴포넌트를 수동으로 붙일 필요가 없다.
+본 제작의 전투 방향은 좌우 대치다. `LOF/Assets/Scenes/SideBattle.unity`를 열고 Play하면 960×540 기준 왼쪽 아군과 오른쪽 적이 중앙으로 접근한다. 첫 아군은 얼음검 대기 시안을 사용하며, 체력바는 전장 양옆에 고정된다. 기존 상하 전투 비교용 씬은 `SampleScene`이다.
+
+1. `LOF/Assets/Scenes/SideBattle.unity`를 열고 코드 임포트가 끝날 때까지 기다린다.
+2. Unity Play 버튼을 누른다. 두 전투 씬에서 실행기가 자동 생성된다. 컴포넌트를 수동으로 붙일 필요가 없다.
 3. 적색 적과 청록색 아군 도형이 접근·공격하며 HP가 감소한다. 승리하면 보상 획득 후 다음 단계로 자동 진행한다.
 4. `Team level +1`은 골드·경험치가 충분하면 활성화된다. 테스트 편의를 위한 팀 전체 성장으로, 정규 기획의 캐릭터별 성장 UI를 대신 구현한 것이 아니다. 화면의 Team Lv.와 Battle Lv.로 다음 전투 적용 시점을 비교한다.
 5. `Test: force defeat`로 패배·파밍 전환을 확인한다. 파밍에서 다시 패배하면 하위 단계로 이동하며 최저 연습 단계에서 멈춘다.
@@ -20,14 +22,14 @@
 - Unity 6000.5.0f1에서 컴파일 후 모델 검사가 통과했다. 첫 승리·보상 중복 방지·성장 반영·파밍·후퇴·최저 단계·재도전·동시 전멸·재화 부족·회차 표기를 검사한다.
 - `AFK Trial > Run Model Checks` 메뉴로 다시 실행할 수 있다. 상세 결과는 로컬 `LOF/Logs/TrialChecks.txt`에 기록한다. Logs는 Git 제외 대상이다.
 - 모델 검사는 Editor 코드 재로드 때도 실행되며 실제 씬이나 플레이어 세이브를 변경하지 않는다.
-- Unity 창 캡처가 두 차례 시간 초과되어 Play Mode 화면과 버튼 조작은 직접 확인하지 못했다. Windows 빌드도 아직 수행하지 않았다.
+- 가로 Windows 빌드는 `output/LandscapeTest/AFK-Trial.exe`로 실행한다. 실제 960×540 창에서 첫 스테이지와 양측 체력 패널을 확인했다. 화면 캡처는 `output/LandscapePreview.png`다. 버튼 조작은 이번 확인 범위에서 제외했다.
 
 ## 환경
 
 - Unity: **6000.5.0f1** (프로젝트 버전 파일 기준)
 - 프로젝트: 저장소 루트의 `LOF` 폴더, Universal 2D / URP
 - IDE: Visual Studio 2022 또는 VS Code. IDE 선택은 각 PC의 Unity Preferences에서 설정한다.
-- 테스트 출력: Windows, 세로 9:16. 기본 창 540×960, 크기 변경 허용.
+- 테스트 출력: Windows, 가로 16:9. 기본 창 960×540, 크기 변경 허용.
 - 현재 PC: RAM 32 GB / NVIDIA GeForce RTX 5070 Ti. 최소 요구 사양이나 고정 개발 조건이 아니다.
 - 사용자 이름이나 `C:/Users/User`를 코드에 고정하지 않는다.
 
@@ -37,7 +39,7 @@
 2. Unity Hub에서 정확히 `6000.5.0f1`을 설치하고 로그인·라이선스 활성화를 완료한다.
 3. Hub에 `LOF` 폴더를 추가해 연다. `Library`와 패키지 캐시는 자동 재생성되며 인터넷이 필요할 수 있다.
 4. 첫 임포트가 완료되면 Editor 전용 스크립트가 테스트 창 설정을 적용한다. Console의 `[AFK Trial] Test setup applied` 메시지로 확인한다. 수동 재적용 메뉴는 `AFK Trial > Apply Test Project Settings`다.
-5. Game 뷰 비율은 각 PC에서 9:16으로 선택한다. Windows 창 설정은 Game 뷰 비율을 자동 변경하지 않는다.
+5. Game 뷰 비율은 각 PC에서 16:9로 선택한다. Windows 창 설정은 Game 뷰 비율을 자동 변경하지 않는다.
 6. `HANDOFF.md`의 최신 상태를 확인하고 다음 작업을 이어간다.
 
 선택: 저장소 루트에서 `powershell -File ./tools/Open-Unity.ps1`로 프로젝트를 열 수 있다. Unity가 다른 위치에 설치되어 있으면 `-EditorPath "D:/.../Unity.exe"`를 전달한다. 설치 버전 자체는 Hub에서 확인한다.
@@ -65,4 +67,4 @@
 
 후속 구현 순서는 기본형 Play Mode 확인 → 스킬·편성 → 뽑기·장비 → 저장·방치·던전이다. 각 기능의 임시 수치는 최종 밸런스와 구분한다. 모델 검사 통과는 최종 게임 완성이나 전체 QA 통과를 뜻하지 않는다.
 
-Editor 설정 스크립트는 첫 임포트 시 `Library/AFKTrialSetup-v1.txt`에 실행 기록을 남긴다. Library를 재생성하면 테스트 설정이 다시 적용된다. `runInBackground=false`는 전체 최소화·방치 시스템의 구현을 대신하지 않는다.
+Editor 설정 스크립트는 첫 임포트 시 `Library/AFKTrialSetup-v2.txt`에 실행 기록을 남긴다. Library를 재생성하면 테스트 설정이 다시 적용된다. `runInBackground=false`는 전체 최소화·방치 시스템의 구현을 대신하지 않는다.

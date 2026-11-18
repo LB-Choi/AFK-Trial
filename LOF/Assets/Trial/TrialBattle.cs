@@ -15,6 +15,8 @@ namespace AFKTrial
             public Vector2 Position;
             public Unit Target;
             public int Attacks;
+            public float LastHitTime = float.NegativeInfinity;
+            public float LastDamage;
             public bool Alive => Hp > 0;
         }
 
@@ -43,14 +45,17 @@ namespace AFKTrial
             Elapsed = 0;
             BattleLevel = Level;
             for (int i = 0; i < 3; i++)
-                Add("ALLY " + (i + 1), true, new Vector2(-1.2f + i * 1.2f, -2),
+                Add("ALLY " + (i + 1), true, new Vector2(-2, -1.2f + i * 1.2f),
                     100 + (Level - 1) * 35, 16 + (Level - 1) * 6);
-            bool boss = Stage > 0 && Stage % 5 == 0;
+            bool bossStage = Stage > 0 && Stage % 5 == 0;
             float power = Stage == 0 ? 0.3f : 0.65f + Stage * 0.2f;
-            for (int i = 0; i < (boss ? 1 : 3); i++)
+            for (int i = 0; i < 3; i++)
+            {
+                bool boss = bossStage && i == 1;
                 Add(boss ? "BOSS" : "ENEMY " + (i + 1), false,
-                    new Vector2(boss ? 0 : -1.2f + i * 1.2f, 2),
+                    new Vector2(2, -1.2f + i * 1.2f),
                     (boss ? 320 : 75) * power, (boss ? 28 : 11) * power);
+            }
         }
 
         private void Add(string name, bool ally, Vector2 position, float hp, float attack)
@@ -81,8 +86,8 @@ namespace AFKTrial
                 }
                 unit.Cooldown = Mathf.Max(0, unit.Cooldown - dt);
                 if (unit.Target == null) continue;
-                if (Vector2.Distance(unit.Position, unit.Target.Position) > 0.65f)
-                    unit.Position = Vector2.MoveTowards(unit.Position, unit.Target.Position, dt * 1.3f);
+                if (Mathf.Abs(unit.Position.x - unit.Target.Position.x) > 0.65f)
+                    unit.Position.x = Mathf.MoveTowards(unit.Position.x, unit.Target.Position.x, dt * 1.3f);
                 else if (unit.Cooldown <= 0)
                 {
                     hits[Units.IndexOf(unit.Target)] += unit.Attack;
@@ -93,7 +98,13 @@ namespace AFKTrial
             bool allies = false, enemies = false;
             for (int i = 0; i < Units.Count; i++)
             {
-                Units[i].Hp = Mathf.Max(0, Units[i].Hp - hits[i]);
+                if (hits[i] > 0)
+                {
+                    Unit unit = Units[i];
+                    unit.LastDamage = Mathf.Min(unit.Hp, hits[i]);
+                    unit.LastHitTime = Elapsed;
+                    unit.Hp -= unit.LastDamage;
+                }
                 if (!Units[i].Alive) continue;
                 if (Units[i].Ally) allies = true; else enemies = true;
             }
