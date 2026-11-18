@@ -15,6 +15,22 @@ namespace AFKTrial.Editor
         {
             try
             {
+                var roster = new TrialBattle();
+                for (int hero = 0; hero < TrialBattle.Heroes.Count; hero++)
+                {
+                    int count = TrialBattle.Heroes.Count;
+                    int[] party = { hero, (hero + 1) % count, (hero + 2) % count };
+                    roster.ApplyFormation(party);
+                    for (int frame = 0; frame < 60; frame++) roster.Tick(0.05f);
+                    for (int slot = 0; slot < party.Length; slot++)
+                    {
+                        var unit = roster.Units[slot];
+                        Require(unit.Name == TrialBattle.Heroes[party[slot]] && unit.Position.x > -2 &&
+                            unit.Attacks > 0 && unit.Target.Hp < unit.Target.MaxHp, "roster member fights in selected slot");
+                    }
+                    roster.StartBattle();
+                    Require(roster.Units[0].Name == TrialBattle.Heroes[hero], "formation survives restart");
+                }
                 var battle = new TrialBattle();
                 Require(battle.Stage == 1 && battle.Units.Count == 6, "initial state");
                 UntilFinished(battle);
@@ -73,9 +89,9 @@ namespace AFKTrial.Editor
                 Require(!new TrialBattle().Upgrade(), "insufficient resources rejected");
                 Require(TrialBattle.StageName(11) == "ROUND 2 / STAGE 1", "round display");
                 Directory.CreateDirectory("Logs");
-                File.WriteAllText("Logs/TrialChecks.txt", "PASS: 17 model checks\nUnity " + Application.unityVersion +
+                File.WriteAllText("Logs/TrialChecks.txt", "PASS: battle and 10-character formation checks\nUnity " + Application.unityVersion +
                     "\n" + DateTime.UtcNow.ToString("O") + "\nNot a Windows build or full game QA result.");
-                Debug.Log("[AFK Trial] PASS: 17 model checks. See Logs/TrialChecks.txt");
+                Debug.Log("[AFK Trial] PASS: battle and 10-character formation checks. See Logs/TrialChecks.txt");
             }
             catch (Exception error)
             {

@@ -6,7 +6,10 @@ namespace AFKTrial
     public sealed class TrialRunner : MonoBehaviour
     {
         private TrialBattle battle;
-        private Texture2D knightAtlas;
+        private readonly Texture2D[] portraits = new Texture2D[TrialBattle.Heroes.Count];
+        private readonly int[] draft = new int[3];
+        private bool editing;
+        private int selectedSlot;
         private bool sideBattle;
         private float accumulator, restartDelay;
         private bool paused;
@@ -25,14 +28,18 @@ namespace AFKTrial
         {
             if (battle != null) return;
             sideBattle = gameObject.scene.name == "SideBattle";
-            knightAtlas = Resources.Load<Texture2D>(sideBattle ? "IceKnightIdle" : "TrialKnight");
+            for (int i = 0; i < portraits.Length; i++)
+            {
+                string key = i == 0 ? "IceKnightIdle" : TrialBattle.Heroes[i].Replace(" ", "");
+                portraits[i] = Resources.Load<Texture2D>(key);
+            }
             battle = new TrialBattle();
             accumulator = restartDelay = 0;
         }
 
         private void Update()
         {
-            if (paused) return;
+            if (paused || editing) return;
             if (battle.Finished)
             {
                 restartDelay += Time.deltaTime;
@@ -64,13 +71,19 @@ namespace AFKTrial
                 float fit = Mathf.Min(Screen.width / 960f, Screen.height / 540f);
                 GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - 960 * fit) / 2,
                     (Screen.height - 540 * fit) / 2, 0), Quaternion.identity, Vector3.one * fit);
-                DrawLandscape();
+                if (editing) DrawFormation(960, 540); else DrawLandscape();
                 GUI.matrix = oldMatrix;
                 return;
             }
             float scale = Mathf.Min(Screen.width / 540f, Screen.height / 960f);
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - 540 * scale) / 2,
                 (Screen.height - 960 * scale) / 2, 0), Quaternion.identity, Vector3.one * scale);
+            if (editing)
+            {
+                DrawFormation(540, 960);
+                GUI.matrix = oldMatrix;
+                return;
+            }
             Fill(new Rect(0, 0, 540, 960), new Color(0.055f, 0.08f, 0.13f));
             GUI.Label(new Rect(24, 20, 500, 40), "AFK TRIAL / FUNCTION TEST", title);
             GUI.Label(new Rect(24, 66, 500, 28), TrialBattle.StageName(battle.Stage) +
@@ -80,20 +93,13 @@ namespace AFKTrial
             GUI.Label(new Rect(24, 136, 500, 28), "Time " + Mathf.Max(0, battle.Limit - battle.Elapsed).ToString("F1") +
                 "    Battle Lv." + battle.BattleLevel + (paused ? "    PAUSED" : ""), label);
             Fill(new Rect(24, 184, 492, 440), new Color(0.09f, 0.14f, 0.21f));
-            foreach (TrialBattle.Unit unit in battle.Units)
+            for (int i = 0; i < battle.Units.Count; i++)
             {
+                var unit = battle.Units[i];
                 float x = 270 + unit.Position.y * 95;
                 float y = 396 - unit.Position.x * 72;
                 Color color = !unit.Alive ? Color.gray : unit.Ally ? new Color(0.2f, 0.8f, 0.85f) : new Color(1, 0.4f, 0.35f);
-                if (unit == battle.Units[0] && knightAtlas != null)
-                {
-                    bool striking = unit.Alive && unit.Attacks > 0 && unit.Cooldown > 0.8f;
-                    Color previous = GUI.color;
-                    GUI.color = unit.Alive ? Color.white : Color.gray;
-                    GUI.DrawTextureWithTexCoords(new Rect(x - 38, y - 41, 76, 76), knightAtlas,
-                        new Rect(striking ? 0.5f : 0f, 0f, 0.5f, 1f));
-                    GUI.color = previous;
-                }
+                if (unit.Ally) DrawHero(i, unit, new Rect(x - 38, y - 41, 76, 76));
                 else
                 {
                     bool hit = battle.Elapsed - unit.LastHitTime < 0.15f;
@@ -117,8 +123,9 @@ namespace AFKTrial
             GUI.enabled = !battle.Finished;
             if (GUI.Button(new Rect(278, 806, 238, 44), "Test: force defeat", button)) battle.ForceTimeout();
             GUI.enabled = true;
-            GUI.Label(new Rect(24, 866, 492, 76),
-                "TEMP VALUES / BASIC ATTACKS ONLY\nGrowth applies next battle. Session-only progress.\nNo save, skills, gacha, equipment or idle rewards yet.", small);
+            if (GUI.Button(new Rect(24, 862, 492, 42), "Formation", button)) OpenFormation();
+            GUI.Label(new Rect(24, 911, 492, 76),
+                "Basic attacks only. Session-only progress.", small);
             GUI.matrix = oldMatrix;
         }
 
@@ -126,9 +133,10 @@ namespace AFKTrial
         {
             Fill(new Rect(0, 0, 960, 540), new Color(0.055f, 0.08f, 0.13f));
             GUI.Label(new Rect(18, 8, 295, 38), "AFK TRIAL", title);
-            GUI.Label(new Rect(195, 12, 365, 32), TrialBattle.StageName(battle.Stage) +
+            if (GUI.Button(new Rect(830, 10, 115, 35), "Formation", button)) OpenFormation();
+            GUI.Label(new Rect(184, 12, 345, 32), TrialBattle.StageName(battle.Stage) +
                 (battle.Farming ? "  [FARM]" : "  [CHALLENGE]"), label);
-            GUI.Label(new Rect(555, 12, 400, 32), $"Gold {battle.Gold}    XP {battle.Experience}    Team Lv.{battle.Level}", label);
+            GUI.Label(new Rect(540, 12, 286, 32), $"Gold {battle.Gold}    XP {battle.Experience}    Team Lv.{battle.Level}", label);
             Fill(new Rect(122, 58, 716, 358), new Color(0.09f, 0.14f, 0.21f));
             for (int i = 0; i < battle.Units.Count; i++)
             {
@@ -136,13 +144,7 @@ namespace AFKTrial
                 float x = 480 + unit.Position.x * 138;
                 float y = 237 - unit.Position.y * 94;
                 Color team = unit.Ally ? new Color(0.2f, 0.8f, 0.85f) : new Color(1, 0.4f, 0.35f);
-                if (i == 0 && knightAtlas != null)
-                {
-                    Color previous = GUI.color;
-                    GUI.color = unit.Alive ? Color.white : Color.gray;
-                    GUI.DrawTexture(new Rect(x - 54, y - 56, 108, 112), knightAtlas, ScaleMode.ScaleToFit);
-                    GUI.color = previous;
-                }
+                if (unit.Ally) DrawHero(i, unit, new Rect(x - 60, y - 55, 120, 110));
                 else
                 {
                     bool hit = battle.Elapsed - unit.LastHitTime < 0.15f;
@@ -150,11 +152,11 @@ namespace AFKTrial
                 }
                 float panelX = unit.Ally ? 12 : 848;
                 float panelY = 350 - (i % 3) * 113;
-                GUI.Label(new Rect(panelX, panelY - 30, 104, 24), unit.Name, small);
+                GUI.Label(new Rect(panelX, panelY - 34, 112, 34), unit.Name, small);
                 Fill(new Rect(panelX, panelY, 100, 7), Color.black);
                 Fill(new Rect(panelX, panelY, 100 * unit.Hp / unit.MaxHp, 7), team);
                 GUI.Label(new Rect(panelX, panelY + 8, 104, 25), Mathf.CeilToInt(unit.Hp) + " HP", small);
-                DrawDamage(unit, x, y - (i == 0 && knightAtlas != null ? 56 : 24));
+                DrawDamage(unit, x, y - (unit.Ally ? 56 : 24));
             }
             GUI.Label(new Rect(16, 424, 470, 32), battle.Result, label);
             GUI.Label(new Rect(515, 424, 430, 32), $"Time {Mathf.Max(0, battle.Limit - battle.Elapsed):F1}    Battle Lv.{battle.BattleLevel}" +
@@ -169,6 +171,62 @@ namespace AFKTrial
             GUI.enabled = !battle.Finished;
             if (GUI.Button(new Rect(752, 470, 192, 50), "Test: force defeat", button)) battle.ForceTimeout();
             GUI.enabled = true;
+        }
+
+        private void DrawHero(int slot, TrialBattle.Unit unit, Rect area)
+        {
+            Color previous = GUI.color;
+            GUI.color = unit.Alive ? Color.white : Color.gray;
+            GUI.DrawTexture(area, portraits[battle.HeroAt(slot)], ScaleMode.ScaleToFit);
+            GUI.color = previous;
+        }
+
+        private void OpenFormation()
+        {
+            for (int i = 0; i < draft.Length; i++) draft[i] = battle.HeroAt(i);
+            selectedSlot = 0;
+            editing = true;
+        }
+
+        private void DrawFormation(int width, int height)
+        {
+            Fill(new Rect(0, 0, width, height), new Color(0.055f, 0.08f, 0.13f));
+            GUI.Label(new Rect(20, 12, width - 40, 40), "Formation", title);
+            GUI.Label(new Rect(20, 54, width - 40, 28), "Choose a slot, then a hero.", label);
+            float slotWidth = (width - 52) / 3f;
+            for (int i = 0; i < draft.Length; i++)
+            {
+                var rect = new Rect(20 + i * (slotWidth + 6), 90, slotWidth, 54);
+                if (GUI.Toggle(rect, selectedSlot == i, $"Slot {i + 1}  /  {TrialBattle.Heroes[draft[i]]}", button))
+                    selectedSlot = i;
+            }
+            int columns = sideBattle ? 5 : 2;
+            int rows = (portraits.Length + columns - 1) / columns;
+            float cardWidth = (width - 40f - (columns - 1) * 6) / columns;
+            float cardHeight = (height - 236f) / rows - 6;
+            for (int hero = 0; hero < portraits.Length; hero++)
+            {
+                float x = 20 + hero % columns * (cardWidth + 6);
+                float y = 158 + hero / columns * (cardHeight + 6);
+                int occupied = System.Array.IndexOf(draft, hero);
+                if (GUI.Button(new Rect(x, y, cardWidth, cardHeight), GUIContent.none, button))
+                {
+                    if (occupied >= 0) draft[occupied] = draft[selectedSlot];
+                    draft[selectedSlot] = hero;
+                }
+                GUI.DrawTexture(new Rect(x + 5, y + 5, cardWidth - 10, cardHeight - 36),
+                    portraits[hero], ScaleMode.ScaleToFit);
+                string prefix = occupied < 0 ? "" : $"[{occupied + 1}] ";
+                GUI.Label(new Rect(x + 8, y + cardHeight - 28, cardWidth - 12, 24),
+                    prefix + TrialBattle.Heroes[hero], small);
+            }
+            if (GUI.Button(new Rect(20, height - 60, 120, 42), "Cancel", button)) editing = false;
+            if (GUI.Button(new Rect(width - 245, height - 60, 225, 42), "Apply & restart battle", button))
+            {
+                battle.ApplyFormation(draft);
+                accumulator = restartDelay = 0;
+                editing = false;
+            }
         }
 
         private void DrawDamage(TrialBattle.Unit unit, float x, float headY)

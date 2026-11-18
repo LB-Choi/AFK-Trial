@@ -7,6 +7,25 @@ namespace AFKTrial
     // Deliberately small, in-memory test model. Values are NOT final balance data.
     public sealed class TrialBattle
     {
+        public static readonly IReadOnlyList<string> Heroes = Array.AsReadOnly(new[] {
+            "Ice Knight", "Scythe Knight", "Banner Paladin", "Lion Guardian", "Hammer Maid",
+            "Katana Knight", "Royal Knight", "Sun Paladin", "Tower Knight", "Axe Warrior"
+        });
+        private readonly int[] formation = { 0, 1, 2 };
+        public int HeroAt(int slot) => formation[slot];
+
+        public void ApplyFormation(int[] heroes)
+        {
+            if (heroes == null || heroes.Length != formation.Length)
+                throw new ArgumentException("Choose three heroes.");
+            var seen = new HashSet<int>();
+            foreach (int hero in heroes)
+                if (hero < 0 || hero >= Heroes.Count || !seen.Add(hero))
+                    throw new ArgumentException("Choose three distinct roster members.");
+            Array.Copy(heroes, formation, heroes.Length);
+            StartBattle();
+        }
+
         public sealed class Unit
         {
             public string Name;
@@ -45,7 +64,7 @@ namespace AFKTrial
             Elapsed = 0;
             BattleLevel = Level;
             for (int i = 0; i < 3; i++)
-                Add("ALLY " + (i + 1), true, new Vector2(-2, -1.2f + i * 1.2f),
+                Add(Heroes[formation[i]], true, new Vector2(-2, -1.2f + i * 1.2f),
                     100 + (Level - 1) * 35, 16 + (Level - 1) * 6);
             bool bossStage = Stage > 0 && Stage % 5 == 0;
             float power = Stage == 0 ? 0.3f : 0.65f + Stage * 0.2f;
