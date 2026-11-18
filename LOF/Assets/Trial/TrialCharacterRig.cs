@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AFKTrial
 {
     // Spine region attachments with stepped slot timelines for hand-drawn action poses.
-    public sealed class IceKnightRig
+    public sealed class TrialCharacterRig
     {
         public class Bone { public string name, parent; public float x, y; }
         public class Slot { public string name, bone, attachment; }
@@ -30,16 +30,18 @@ namespace AFKTrial
             public Rect Bounds;
         }
 
+        private readonly bool hasSetupPose;
         private readonly Slot[] slots;
         private readonly Dictionary<string, Drawing>[] drawings;
         private readonly Clip walk, attack;
         private readonly float stride, recovery;
         public readonly float ImpactTime;
 
-        public IceKnightRig()
+        public TrialCharacterRig(string resource)
         {
-            const string folder = "IceKnightRig/";
-            var json = Resources.Load<TextAsset>(folder + "IceKnight");
+            string folder = resource.Substring(0, resource.LastIndexOf('/') + 1);
+            var json = Resources.Load<TextAsset>(resource);
+            if (!json) throw new InvalidDataException("Missing animation in Resources: " + resource);
             var reader = new DataContractJsonSerializer(typeof(Data),
                 new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
             Data data;
@@ -60,6 +62,7 @@ namespace AFKTrial
             }
 
             slots = data.slots;
+            hasSetupPose = Array.Exists(slots, slot => slot.attachment != null);
             drawings = new Dictionary<string, Drawing>[slots.Length];
             for (int i = 0; i < slots.Length; i++)
             {
@@ -88,12 +91,17 @@ namespace AFKTrial
             return end;
         }
 
-        public void Draw(Rect area, TrialBattle.Unit unit, float elapsed)
+        public void Draw(Rect area, TrialBattle.Unit unit, float elapsed, Texture2D portrait)
         {
             if (Event.current.type != EventType.Repaint) return;
             const float tickTolerance = 0.00001f;
-            float age = (elapsed - unit.SwingStart) * unit.SwingSpeed;
-            Clip clip = unit.Alive && age < recovery ? attack : unit.Alive && unit.Walking ? walk : null;
+            float age = (elapsed - unit.SwingStart) * unit.SwingSpeed * ImpactTime / unit.Stats.ImpactSeconds;
+            Clip clip = unit.Alive && age + tickTolerance < recovery ? attack : unit.Alive && unit.Walking ? walk : null;
+            if (clip == null && !hasSetupPose)
+            {
+                GUI.DrawTexture(area, portrait, ScaleMode.ScaleToFit);
+                return;
+            }
             float time = clip == walk ? Mathf.Repeat(elapsed + tickTolerance, stride) : age + tickTolerance;
             float scale = Mathf.Min(area.width / 302, area.height / 320);
             Vector2 origin = area.center + Vector2.up * (151 * scale);

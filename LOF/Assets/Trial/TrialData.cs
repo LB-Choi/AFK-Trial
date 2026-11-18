@@ -13,9 +13,10 @@ namespace AFKTrial
         public sealed class Fighter
         {
             public string Id, Name, Portrait, Animation;
-            public float Hp, Attack, HpPerLevel, AttackPerLevel, Speed, Range, Interval;
+            public float Hp, Attack, HpPerLevel, AttackPerLevel, Speed, Range, Interval, ImpactSeconds;
         }
 
+        public readonly Dictionary<string, string> RigResources = new Dictionary<string, string>();
         public readonly List<Fighter> Heroes = new List<Fighter>();
         public readonly Dictionary<string, Fighter> Enemies = new Dictionary<string, Fighter>();
         public readonly int[] StartingFormation = { -1, -1, -1 };
@@ -31,6 +32,14 @@ namespace AFKTrial
 
         public TrialData(string directory)
         {
+            var impacts = new Dictionary<string, float>();
+            foreach (var row in CsvRow.Read(directory, "Animations"))
+            {
+                string id = row.Text("id");
+                if (impacts.ContainsKey(id)) throw row.Error("duplicate animation " + id);
+                RigResources.Add(id, row.Text("rigResource"));
+                impacts.Add(id, row.Number("impactSeconds", true));
+            }
             var ids = new HashSet<string>();
             foreach (var row in CsvRow.Read(directory, "Heroes"))
             {
@@ -38,7 +47,8 @@ namespace AFKTrial
                 if (!ids.Add(hero.Id)) throw row.Error("duplicate id " + hero.Id);
                 hero.Portrait = row.Text("portrait");
                 hero.Animation = row.Text("animation", true);
-                if (hero.Animation != "" && hero.Animation != "ice_knight") throw row.Error("unknown animation " + hero.Animation);
+                if (hero.Animation != "" && !impacts.TryGetValue(hero.Animation, out hero.ImpactSeconds))
+                    throw row.Error("unknown animation " + hero.Animation);
                 hero.HpPerLevel = row.Number("hpPerLevel");
                 hero.AttackPerLevel = row.Number("attackPerLevel");
                 int slot = row.Integer("startingSlot");

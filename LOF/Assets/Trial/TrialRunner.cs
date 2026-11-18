@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -6,7 +7,7 @@ namespace AFKTrial
     public sealed class TrialRunner : MonoBehaviour
     {
         private TrialBattle battle;
-        private IceKnightRig iceKnight;
+        private readonly Dictionary<string, TrialCharacterRig> rigs = new Dictionary<string, TrialCharacterRig>();
         private Texture2D[] portraits;
         private Texture2D hitFlash;
         private string loadError;
@@ -38,8 +39,11 @@ namespace AFKTrial
                 for (int i = 0; i < portraits.Length; i++)
                     portraits[i] = LoadTexture(data.Heroes[i].Portrait);
                 hitFlash = LoadTexture(data.HitTexture);
-                iceKnight = new IceKnightRig();
-                battle = new TrialBattle(data, iceKnight.ImpactTime);
+                rigs.Clear();
+                foreach (var hero in data.Heroes)
+                    if (hero.Animation.Length > 0 && !rigs.ContainsKey(hero.Animation))
+                        rigs.Add(hero.Animation, new TrialCharacterRig(data.RigResources[hero.Animation]));
+                battle = new TrialBattle(data);
                 loadError = null;
             }
             catch (System.Exception error)
@@ -204,8 +208,9 @@ namespace AFKTrial
         {
             Color previous = GUI.color;
             GUI.color = unit.Alive ? Color.white : Color.gray;
-            if (unit.Stats.Animation == "ice_knight") iceKnight.Draw(area, unit, battle.Elapsed);
-            else GUI.DrawTexture(area, portraits[battle.HeroAt(slot)], ScaleMode.ScaleToFit);
+            var portrait = portraits[battle.HeroAt(slot)];
+            if (rigs.TryGetValue(unit.Stats.Animation, out var rig)) rig.Draw(area, unit, battle.Elapsed, portrait);
+            else GUI.DrawTexture(area, portrait, ScaleMode.ScaleToFit);
             GUI.color = previous;
         }
 

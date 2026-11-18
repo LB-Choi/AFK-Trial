@@ -58,13 +58,11 @@ namespace AFKTrial
         public bool Finished { get; private set; }
         public string Result { get; private set; } = "Battle started";
 
-        private readonly float iceImpact;
-        public TrialBattle(TrialData data, float iceImpact)
+        public TrialBattle(TrialData data)
         {
             Data = data;
             Heroes = data.Heroes.ConvertAll(hero => hero.Name).AsReadOnly();
             formation = (int[])data.StartingFormation.Clone();
-            this.iceImpact = iceImpact;
             StartBattle();
         }
 
@@ -94,7 +92,7 @@ namespace AFKTrial
         {
             var position = new Vector2(ally ? -Data.SpawnDistance : Data.SpawnDistance, (lane - 1) * Data.LaneSpacing);
             Units.Add(new Unit { Stats = stats, Name = name, Ally = ally, Position = position,
-                Hp = hp, MaxHp = hp, Attack = attack, SwingSpeed = Mathf.Max(1, iceImpact / stats.Interval) });
+                Hp = hp, MaxHp = hp, Attack = attack, SwingSpeed = Mathf.Max(1, stats.ImpactSeconds / stats.Interval) });
         }
 
         public void Tick(float dt)
@@ -129,19 +127,19 @@ namespace AFKTrial
                 }
                 else if (unit.Cooldown <= 0)
                 {
-                    bool iceKnight = unit.Ally && unit.Stats.Animation == "ice_knight";
-                    if (iceKnight)
+                    float impact = unit.Stats.ImpactSeconds;
+                    if (impact > 0)
                     {
                         if (!unit.WindingUp)
                         {
                             unit.SwingStart = Elapsed;
                             unit.WindingUp = true;
                         }
-                        if ((Elapsed - unit.SwingStart) * unit.SwingSpeed + 0.00001f < iceImpact) continue;
+                        if ((Elapsed - unit.SwingStart) * unit.SwingSpeed + 0.00001f < impact) continue;
                         unit.WindingUp = false;
                     }
                     hits[Units.IndexOf(unit.Target)] += unit.Attack;
-                    unit.Cooldown = unit.Stats.Interval - (iceKnight ? iceImpact / unit.SwingSpeed : 0);
+                    unit.Cooldown = unit.Stats.Interval - impact / unit.SwingSpeed;
                     unit.Attacks++;
                 }
             }

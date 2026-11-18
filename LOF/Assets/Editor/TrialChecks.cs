@@ -22,8 +22,7 @@ namespace AFKTrial.Editor
             {
                 ValidateLiveTables();
                 var fixture = new TrialData(Path.Combine(Application.dataPath, "Editor/TrialChecksData~"));
-                var rig = new IceKnightRig();
-                TrialBattle NewBattle() => new TrialBattle(fixture, rig.ImpactTime);
+                TrialBattle NewBattle() => new TrialBattle(fixture);
                 var roster = NewBattle();
                 for (int hero = 0; hero < roster.Heroes.Count; hero++)
                 {
