@@ -1,3 +1,4 @@
-﻿id,name,hp,attack,moveSpeed,range,attackInterval
-normal,ENEMY,75,11,1.3,0.65,1
-boss,BOSS,320,28,1.3,0.65,1
+﻿id,name,hp,attack,moveSpeed,range,attackInterval,animation,contactDistance,hitHeight
+normal,Bandit,75,11,1.3,0.65,1,bandit,,188
+boss,Bandit Captain,320,28,1.3,0.65,1,bandit_captain,0.62,120
+boss2,Bandit Chief,320,28,1.3,0.65,1,bandit_chief,0.62,119

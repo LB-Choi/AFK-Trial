@@ -33,26 +33,43 @@ namespace AFKTrial
         private readonly bool hasSetupPose;
         private readonly Slot[] slots;
         private readonly Dictionary<string, Drawing>[] drawings;
-        private readonly Clip walk, attack;
-        private readonly float stride, recovery;
+        private readonly Clip idle, walk, attack;
+        private readonly float breathCycle, stride, recovery;
         public readonly float ImpactTime;
 
-        public TrialCharacterRig(string resource)
+        public static Data ReadData(string resource)
         {
-            string folder = resource.Substring(0, resource.LastIndexOf('/') + 1);
             var json = Resources.Load<TextAsset>(resource);
             if (!json) throw new InvalidDataException("Missing animation in Resources: " + resource);
             var reader = new DataContractJsonSerializer(typeof(Data),
                 new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
-            Data data;
             using (var stream = new MemoryStream(json.bytes))
-                data = (Data)reader.ReadObject(stream);
+                return (Data)reader.ReadObject(stream);
+        }
 
+        public static float AttackDurationAtImpact(string resource, float combatImpactTime)
+        {
+            var clip = ReadData(resource).animations["attack"];
+            return Duration(clip) * combatImpactTime / ImpactMarker(clip);
+        }
+
+        private static float ImpactMarker(Clip clip) => Array.Find(clip.events, marker => marker.name == "impact").time;
+
+        public TrialCharacterRig(string resource)
+        {
+            string folder = resource.Substring(0, resource.LastIndexOf('/') + 1);
+            Data data = ReadData(resource);
+
+            if (data.animations.TryGetValue("idle", out idle))
+            {
+                breathCycle = Duration(idle);
+                if (breathCycle <= 0) throw new InvalidDataException("Empty idle cycle: " + resource);
+            }
             walk = data.animations["walk"];
             attack = data.animations["attack"];
             stride = Duration(walk);
             recovery = Duration(attack);
-            ImpactTime = Array.Find(attack.events, marker => marker.name == "impact").time;
+            ImpactTime = ImpactMarker(attack);
 
             var origins = new Dictionary<string, Vector2>();
             foreach (Bone bone in data.bones)
@@ -91,20 +108,43 @@ namespace AFKTrial
             return end;
         }
 
+        private Clip SelectClip(TrialBattle.Unit unit, float elapsed, out float time)
+        {
+            time = 0;
+            if (!unit.Alive) return null;
+
+            const float tickTolerance = 0.00001f;
+            float age = (elapsed - unit.SwingStart) * unit.SwingSpeed * ImpactTime / unit.Stats.ImpactSeconds;
+            if (age + tickTolerance < recovery)
+            {
+                time = age + tickTolerance;
+                return attack;
+            }
+            if (unit.Walking)
+            {
+                time = Mathf.Repeat(elapsed + tickTolerance, stride);
+                return walk;
+            }
+            if (idle != null) time = Mathf.Repeat(elapsed, breathCycle);
+            return idle;
+        }
+
+        internal static Vector2 ScreenPointAtHeight(Rect area, float height, out float scale)
+        {
+            scale = Mathf.Min(area.width / 302, area.height / 320);
+            return area.center + Vector2.up * ((151 - height) * scale);
+        }
+
         public void Draw(Rect area, TrialBattle.Unit unit, float elapsed, Texture2D portrait)
         {
             if (Event.current.type != EventType.Repaint) return;
-            const float tickTolerance = 0.00001f;
-            float age = (elapsed - unit.SwingStart) * unit.SwingSpeed * ImpactTime / unit.Stats.ImpactSeconds;
-            Clip clip = unit.Alive && age + tickTolerance < recovery ? attack : unit.Alive && unit.Walking ? walk : null;
+            Clip clip = SelectClip(unit, elapsed, out float time);
             if (clip == null && !hasSetupPose)
             {
                 GUI.DrawTexture(area, portrait, ScaleMode.ScaleToFit);
                 return;
             }
-            float time = clip == walk ? Mathf.Repeat(elapsed + tickTolerance, stride) : age + tickTolerance;
-            float scale = Mathf.Min(area.width / 302, area.height / 320);
-            Vector2 origin = area.center + Vector2.up * (151 * scale);
+            Vector2 origin = ScreenPointAtHeight(area, 0, out float scale);
             for (int i = 0; i < slots.Length; i++)
             {
                 Slot slot = slots[i];

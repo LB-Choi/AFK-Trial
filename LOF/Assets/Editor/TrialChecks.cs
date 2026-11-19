@@ -23,6 +23,8 @@ namespace AFKTrial.Editor
                 ValidateLiveTables();
                 var fixture = new TrialData(Path.Combine(Application.dataPath, "Editor/TrialChecksData~"));
                 TrialBattle NewBattle() => new TrialBattle(fixture);
+                CheckEquipment(NewBattle());
+                CheckSummonsAndSkills(NewBattle());
                 var roster = NewBattle();
                 for (int hero = 0; hero < roster.Heroes.Count; hero++)
                 {
@@ -43,6 +45,8 @@ namespace AFKTrial.Editor
                 Require(battle.Stage == 1 && battle.Units.Count == 6, "initial state");
                 UntilFinished(battle);
                 Require(battle.Highest == 1 && battle.Stage == 2 && battle.Gold == 45, "first win rewards / advance");
+                Require(battle.Won && battle.ActiveStage == 1 && battle.GoldReward == battle.Gold &&
+                    battle.ExperienceReward == battle.Experience, "victory HUD shows completed stage and awarded amounts");
                 int gold = battle.Gold;
                 battle.Tick(1);
                 Require(battle.Gold == gold, "no duplicate result reward");
@@ -52,6 +56,8 @@ namespace AFKTrial.Editor
                     "new battle resets state and applies growth");
                 battle.ForceTimeout();
                 Require(battle.Farming && battle.Stage == 1 && battle.Next == 2, "defeat enters farming");
+                Require(!battle.Won && !battle.ActiveFarming && battle.ActiveStage == 2 &&
+                    battle.GoldReward == 0 && battle.ExperienceReward == 0, "defeat HUD has no previous reward");
                 gold = battle.Gold;
                 battle.StartBattle();
                 UntilFinished(battle);
@@ -90,6 +96,10 @@ namespace AFKTrial.Editor
                 Require(bossBattle.Units.Count == 6 && bossBattle.Units[4].Name == "BOSS" &&
                     bossBattle.Units[3].MaxHp < bossBattle.Units[4].MaxHp &&
                     bossBattle.Units[5].MaxHp == bossBattle.Units[3].MaxHp, "boss flanked by two regular enemies");
+                bossBattle.ForceTimeout();
+                Require(bossBattle.BossStage && bossBattle.Limit == fixture.BossSeconds, "boss HUD stays until restart");
+                bossBattle.StartBattle();
+                Require(!bossBattle.BossStage && bossBattle.ActiveFarming && !bossBattle.Finished, "farming HUD after boss defeat");
                 var wipe = NewBattle();
                 foreach (var unit in wipe.Units) unit.Hp = 0;
                 wipe.Tick(0.05f);
@@ -110,6 +120,50 @@ namespace AFKTrial.Editor
             }
         }
 
+        private static void CheckSummonsAndSkills(TrialBattle battle)
+        {
+            int tickets = battle.Tickets;
+            var first = battle.Summon(1)[0];
+            Require(!first.IsNew && first.Level == 2 && battle.Tickets == tickets - 1, "duplicate raises only drawn hero");
+            Require(!battle.Train(first.Hero, 0), "skill rejects insufficient gold");
+            battle.Sell(battle.Inventory[1]);
+            int gold = battle.Gold, cost = battle.SkillCost(first.Hero, 0);
+            Require(battle.Train(first.Hero, 0) && battle.SkillLevel(first.Hero, 0) == 2 &&
+                battle.SkillLevel(first.Hero, 1) == 1 && battle.Gold == gold - cost, "skill upgrade is per hero and slot");
+            Require(battle.Summon(10).Length == 10 && battle.Summon(10) == null &&
+                battle.Tickets == tickets - 11, "ten pulls are all or nothing");
+            UntilFinished(battle);
+            Require(battle.Won && battle.Tickets == tickets - 11 + battle.Data.FirstWinTickets, "first win tickets");
+        }
+        private static void CheckEquipment(TrialBattle battle)
+        {
+            var sword = battle.Inventory[0];
+            var replacement = battle.Inventory[1];
+            var armor = battle.Inventory[2];
+            var necklace = battle.Inventory[4];
+            var unit = battle.Units[0];
+            int hero = battle.HeroAt(0);
+            float attack = unit.Attack, hp = unit.MaxHp;
+            unit.Hp *= 0.5f;
+            Require(battle.Equip(hero, sword) && battle.Equip(hero, armor) && battle.Equip(hero, necklace),
+                "three equipment slots");
+            Require(unit.Attack == attack + sword.Gear.Bonus && unit.Armor == armor.Gear.Bonus &&
+                unit.MaxHp == hp + necklace.Gear.Bonus && unit.Hp == unit.MaxHp / 2, "live gear stats preserve HP ratio");
+            Require(!battle.Sell(sword) && !battle.Equip(battle.HeroAt(1), sword), "equipped item ownership");
+            Require(battle.Equip(hero, replacement) && sword.Owner == -1 && unit.Attack == attack + replacement.Gear.Bonus,
+                "replacement releases prior item");
+            battle.StartBattle();
+            var enemy = battle.Units[3];
+            unit = battle.Units[0];
+            enemy.Target = unit;
+            enemy.Position = unit.Position;
+            battle.Tick(0.05f);
+            Require(Mathf.Approximately(unit.LastDamage, enemy.Attack * 100f / (100f + armor.Gear.Bonus)),
+                "armor reduces actual hit");
+            Require(battle.Unequip(hero, TrialData.GearSlot.Armor) && unit.Armor == 0, "remove armor");
+            Require(battle.Sell(sword) && !battle.Sell(sword) && battle.Gold == sword.Gear.SellGold &&
+                !battle.Equip(hero, sword), "sale credits once and removes item");
+        }
         private static void UntilFinished(TrialBattle battle)
         {
             for (int i = 0; i < 1300 && !battle.Finished; i++) battle.Tick(0.05f);

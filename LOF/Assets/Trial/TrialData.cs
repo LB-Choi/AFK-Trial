@@ -10,15 +10,39 @@ namespace AFKTrial
 {
     public sealed class TrialData
     {
+        public sealed class Skill
+        {
+            public string Name, Description;
+            public int BaseGoldCost;
+        }
+        public readonly Skill[,] Skills;
+        public readonly bool StartWithAllHeroes;
+        public readonly int StartingTickets, FirstWinTickets, FirstBossTickets;
+        public readonly int IdleCapHours, IdleEfficiencyPercent, IdleReferenceClearSeconds;
+
+        public enum GearSlot { Weapon, Armor, Necklace }
+        public sealed class Gear
+        {
+            public string Name;
+            public GearSlot Slot;
+            public int Bonus, SellGold;
+        }
+        public readonly List<Gear> StarterGear = new List<Gear>();
+
+        public enum Role { None, Attack, Defense, Support }
+
         public sealed class Fighter
         {
             public string Id, Name, Portrait, Animation;
+            public Role Role;
             public float Hp, Attack, HpPerLevel, AttackPerLevel, Speed, Range, Interval, ImpactSeconds;
+            public float ContactDistance, AttackDuration, HitHeight;
         }
 
         public readonly Dictionary<string, string> RigResources = new Dictionary<string, string>();
         public readonly List<Fighter> Heroes = new List<Fighter>();
         public readonly Dictionary<string, Fighter> Enemies = new Dictionary<string, Fighter>();
+        public readonly Fighter RoundBoss;
         public readonly int[] StartingFormation = { -1, -1, -1 };
         public readonly int RoundLength, BossEvery, BossSlot, PracticeGold, BaseGold, GoldPerStage,
             PracticeXp, BaseXp, XpPerStage, FirstWinMultiplier, UpgradeGold, UpgradeXp;
@@ -27,11 +51,24 @@ namespace AFKTrial
         public readonly string HitTexture;
         public readonly int HitColumns, HitRows, HitFrames;
         public readonly float HitFps, LandscapeSize, PortraitSize;
+        public readonly Vector2 HitSparkPivot;
 
         public static TrialData Load() => new TrialData(Path.Combine(Application.streamingAssetsPath, "Data"));
 
         public TrialData(string directory)
         {
+            var idle = CsvRow.Single(directory, "IdleRewards");
+            IdleCapHours = idle.Integer("capHours", 1);
+            IdleEfficiencyPercent = idle.Integer("efficiencyPercent", 1);
+            if (IdleEfficiencyPercent > 100) throw idle.Error("efficiencyPercent must be at most 100");
+            IdleReferenceClearSeconds = idle.Integer("referenceClearSeconds", 1);
+            foreach (var row in CsvRow.Read(directory, "Equipment"))
+            {
+                if (!Enum.TryParse(row.Text("slot"), out GearSlot slot) || !Enum.IsDefined(typeof(GearSlot), slot))
+                    throw row.Error("invalid equipment slot");
+                StarterGear.Add(new Gear { Name = row.Text("name"), Slot = slot,
+                    Bonus = row.Integer("bonus", 1), SellGold = row.Integer("sellGold", 1) });
+            }
             var impacts = new Dictionary<string, float>();
             foreach (var row in CsvRow.Read(directory, "Animations"))
             {
@@ -43,12 +80,11 @@ namespace AFKTrial
             var ids = new HashSet<string>();
             foreach (var row in CsvRow.Read(directory, "Heroes"))
             {
-                var hero = ReadFighter(row);
+                var hero = ReadFighter(row, row.Text("animation", true), impacts);
                 if (!ids.Add(hero.Id)) throw row.Error("duplicate id " + hero.Id);
+                if (!Enum.TryParse(row.Optional("role", "None"), true, out hero.Role) || !Enum.IsDefined(typeof(Role), hero.Role))
+                    throw row.Error("invalid hero role");
                 hero.Portrait = row.Text("portrait");
-                hero.Animation = row.Text("animation", true);
-                if (hero.Animation != "" && !impacts.TryGetValue(hero.Animation, out hero.ImpactSeconds))
-                    throw row.Error("unknown animation " + hero.Animation);
                 hero.HpPerLevel = row.Number("hpPerLevel");
                 hero.AttackPerLevel = row.Number("attackPerLevel");
                 int slot = row.Integer("startingSlot");
@@ -62,9 +98,36 @@ namespace AFKTrial
             }
             if (Array.IndexOf(StartingFormation, -1) >= 0)
                 throw new InvalidDataException("Heroes.csv requires one hero for each startingSlot 1, 2 and 3.");
+            var summon = CsvRow.Single(directory, "Summoning");
+            int all = summon.Integer("startWithAllHeroes");
+            if (all > 1) throw summon.Error("startWithAllHeroes must be 0 or 1");
+            StartWithAllHeroes = all == 1;
+            StartingTickets = summon.Integer("startingTickets");
+            FirstWinTickets = summon.Integer("firstWinTickets");
+            FirstBossTickets = summon.Integer("firstBossTickets");
+            Skills = new Skill[Heroes.Count, 3];
+            foreach (var row in CsvRow.Read(directory, "Skills"))
+            {
+                string id = row.Text("heroId");
+                int hero = Heroes.FindIndex(h => h.Id == id);
+                int slot = row.Integer("slot", 1) - 1;
+                if (hero < 0 || slot >= 3 || Skills[hero, slot] != null) throw row.Error("invalid or duplicate hero/slot");
+                Skills[hero, slot] = new Skill { Name = row.Text("name"), Description = row.Text("description", true),
+                    BaseGoldCost = row.Integer("baseGoldCost", 1) };
+            }
+            foreach (var skill in Skills)
+                if (skill == null) throw new InvalidDataException("Skills.csv requires three slots per hero.");
             foreach (var row in CsvRow.Read(directory, "Enemies"))
             {
-                var enemy = ReadFighter(row);
+                var enemy = ReadFighter(row, row.Optional("animation", ""), impacts);
+                if (row.Optional("hitHeight", "") != "") enemy.HitHeight = row.Number("hitHeight", true);
+                if (row.Optional("contactDistance", "") != "")
+                {
+                    enemy.ContactDistance = row.Number("contactDistance", true);
+                    if (enemy.ContactDistance > enemy.Range) throw row.Error("contactDistance exceeds attack range");
+                    if (enemy.Animation.Length == 0) throw row.Error("contactDistance requires an enemy animation");
+                    enemy.AttackDuration = TrialCharacterRig.AttackDurationAtImpact(RigResources[enemy.Animation], enemy.ImpactSeconds);
+                }
                 if (Enemies.ContainsKey(enemy.Id)) throw row.Error("duplicate id " + enemy.Id);
                 Enemies.Add(enemy.Id, enemy);
             }
@@ -72,6 +135,8 @@ namespace AFKTrial
                 throw new InvalidDataException("Enemies.csv requires normal and boss.");
             var p = CsvRow.Single(directory, "Progression");
             RoundLength = p.Integer("roundLength", 1);
+            string roundBossId = p.Optional("roundBoss", "boss");
+            if (!Enemies.TryGetValue(roundBossId, out RoundBoss)) throw p.Error("unknown roundBoss " + roundBossId);
             BossEvery = p.Integer("bossEvery", 1);
             BossSlot = p.Integer("bossSlot", 1) - 1;
             if (BossSlot >= StartingFormation.Length) throw p.Error("bossSlot must be 1 to 3");
@@ -101,13 +166,22 @@ namespace AFKTrial
             HitFps = fx.Number("fps", true);
             LandscapeSize = fx.Number("landscapeSize", true);
             PortraitSize = fx.Number("portraitSize", true);
+            HitSparkPivot = new Vector2(fx.Optional("sparkX", "") == "" ? .5f : fx.Number("sparkX"),
+                fx.Optional("sparkY", "") == "" ? .5f : fx.Number("sparkY"));
+            if (HitSparkPivot.x > 1 || HitSparkPivot.y > 1) throw fx.Error("spark pivot must lie inside its atlas cell");
         }
 
-        private static Fighter ReadFighter(CsvRow row) => new Fighter {
-            Id = row.Text("id"), Name = row.Text("name"), Hp = row.Number("hp", true),
-            Attack = row.Number("attack"), Speed = row.Number("moveSpeed"), Range = row.Number("range"),
-            Interval = row.Number("attackInterval", true)
-        };
+        private static Fighter ReadFighter(CsvRow row, string animation, Dictionary<string, float> impacts)
+        {
+            var fighter = new Fighter {
+                Id = row.Text("id"), Name = row.Text("name"), Hp = row.Number("hp", true),
+                Attack = row.Number("attack"), Speed = row.Number("moveSpeed"), Range = row.Number("range"),
+                Interval = row.Number("attackInterval", true), Animation = animation
+            };
+            if (animation.Length > 0 && !impacts.TryGetValue(animation, out fighter.ImpactSeconds))
+                throw row.Error("unknown animation " + animation);
+            return fighter;
+        }
     }
 
     internal sealed class CsvRow
@@ -128,6 +202,7 @@ namespace AFKTrial
         }
 
         public InvalidDataException Error(string message) => new InvalidDataException(location + ": " + message);
+        public string Optional(string key, string fallback) => fields.TryGetValue(key, out var value) ? value : fallback;
         public string Text(string key, bool allowEmpty = false)
         {
             if (!fields.TryGetValue(key, out var value) || (!allowEmpty && value.Length == 0)) throw Error("missing " + key);

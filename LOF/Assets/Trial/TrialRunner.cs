@@ -4,10 +4,11 @@ using UnityEngine.SceneManagement;
 
 namespace AFKTrial
 {
-    public sealed class TrialRunner : MonoBehaviour
+    public sealed partial class TrialRunner : MonoBehaviour
     {
         private TrialBattle battle;
         private readonly Dictionary<string, TrialCharacterRig> rigs = new Dictionary<string, TrialCharacterRig>();
+        private readonly List<(int slot, float x, float y)> fieldDrawOrder = new List<(int, float, float)>();
         private Texture2D[] portraits;
         private Texture2D hitFlash;
         private string loadError;
@@ -16,7 +17,8 @@ namespace AFKTrial
         private int selectedSlot;
         private bool sideBattle;
         private float accumulator, restartDelay;
-        private bool paused;
+        private float BattleAnimationTime => battle.Elapsed + restartDelay;
+        private bool heroesFromMenu;
         private GUIStyle title, label, small, button, damage;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -30,7 +32,6 @@ namespace AFKTrial
 
         private void OnEnable()
         {
-            if (battle != null) return;
             sideBattle = gameObject.scene.name == "SideBattle";
             try
             {
@@ -39,15 +40,18 @@ namespace AFKTrial
                 for (int i = 0; i < portraits.Length; i++)
                     portraits[i] = LoadTexture(data.Heroes[i].Portrait);
                 hitFlash = LoadTexture(data.HitTexture);
+                LoadBattleArt();
+                LoadFormationArt();
                 rigs.Clear();
-                foreach (var hero in data.Heroes)
-                    if (hero.Animation.Length > 0 && !rigs.ContainsKey(hero.Animation))
-                        rigs.Add(hero.Animation, new TrialCharacterRig(data.RigResources[hero.Animation]));
+                foreach (var entry in data.RigResources)
+                    rigs.Add(entry.Key, new TrialCharacterRig(entry.Value));
                 battle = new TrialBattle(data);
+                OpenProgressSession();
                 loadError = null;
             }
             catch (System.Exception error)
             {
+                battle = null;
                 loadError = error.Message;
                 Debug.LogException(error);
                 return;
@@ -64,7 +68,9 @@ namespace AFKTrial
 
         private void Update()
         {
-            if (battle == null || paused || editing) return;
+            if (battle == null || progressLock == null || suspended) return;
+            if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
+            if (editing || HasPendingIdleReward) return;
             if (battle.Finished)
             {
                 restartDelay += Time.deltaTime;
@@ -74,7 +80,11 @@ namespace AFKTrial
             accumulator += Time.deltaTime;
             while (accumulator >= 0.05f && !battle.Finished)
             { battle.Tick(0.05f); accumulator -= 0.05f; }
-            if (battle.Finished) accumulator = 0;
+            if (battle.Finished)
+            {
+                accumulator = 0;
+                CheckpointProgress(battle.Won);
+            }
         }
 
         private void OnGUI()
@@ -93,192 +103,303 @@ namespace AFKTrial
                 damage = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter };
                 damage.normal.textColor = new Color(1f, 0.27f, 0.27f);
+                InitKnightSkin();
             }
             Matrix4x4 oldMatrix = GUI.matrix;
+            ApplyKnightSkin();
+            try { DrawGameGui(); }
+            finally { GUI.matrix = oldMatrix; RestoreKnightSkin(); }
+        }
+
+        private void DrawGameGui()
+        {
             if (sideBattle)
             {
                 float fit = Mathf.Min(Screen.width / 960f, Screen.height / 540f);
                 GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - 960 * fit) / 2,
                     (Screen.height - 540 * fit) / 2, 0), Quaternion.identity, Vector3.one * fit);
-                if (editing) DrawFormation(960, 540); else DrawLandscape();
-                GUI.matrix = oldMatrix;
+                if (HasPendingIdleReward) DrawIdleReturnPopup(960, 540);
+                else if (editing) DrawHeroes(960, 540);
+                else DrawLandscape();
+
                 return;
             }
             float scale = Mathf.Min(Screen.width / 540f, Screen.height / 960f);
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - 540 * scale) / 2,
                 (Screen.height - 960 * scale) / 2, 0), Quaternion.identity, Vector3.one * scale);
-            if (editing)
+            if (HasPendingIdleReward)
             {
-                DrawFormation(540, 960);
-                GUI.matrix = oldMatrix;
+                DrawIdleReturnPopup(540, 960);
                 return;
             }
-            Fill(new Rect(0, 0, 540, 960), new Color(0.055f, 0.08f, 0.13f));
-            GUI.Label(new Rect(24, 20, 500, 40), "AFK TRIAL / FUNCTION TEST", title);
-            GUI.Label(new Rect(24, 66, 500, 28), battle.StageName(battle.Stage) +
-                (battle.Farming ? "  [FARM]" : "  [CHALLENGE]"), label);
-            GUI.Label(new Rect(24, 100, 500, 28), "Gold " + battle.Gold + "    XP " + battle.Experience +
-                "    Team Lv." + battle.Level, label);
-            GUI.Label(new Rect(24, 136, 500, 28), "Time " + Mathf.Max(0, battle.Limit - battle.Elapsed).ToString("F1") +
-                "    Battle Lv." + battle.BattleLevel + (paused ? "    PAUSED" : ""), label);
-            Fill(new Rect(24, 184, 492, 440), new Color(0.09f, 0.14f, 0.21f));
-            for (int i = 0; i < battle.Units.Count; i++)
+            if (editing)
             {
-                var unit = battle.Units[i];
-                float x = 270 + unit.Position.y * 95;
-                float y = 396 - unit.Position.x * 72;
-                Color color = !unit.Alive ? Color.gray : unit.Ally ? new Color(0.2f, 0.8f, 0.85f) : new Color(1, 0.4f, 0.35f);
-                if (unit.Ally) DrawHero(i, unit, new Rect(x - 38, y - 41, 76, 76));
-                else
-                {
-                    bool hit = battle.Elapsed - unit.LastHitTime < 0.15f;
-                    Fill(new Rect(x - 24, y - 24, 48, 48), hit ? Color.white : color);
-                }
-                DrawHitFlash(unit, x, y, battle.Data.PortraitSize);
-                float infoX = x - 39;
-                Fill(new Rect(infoX, y - 40, 78, 7), Color.black);
-                Fill(new Rect(infoX, y - 40, 78 * unit.Hp / unit.MaxHp, 7), Color.green);
-                GUI.Label(new Rect(infoX - 3, y + 26, 100, 23), unit.Name, small);
-                GUI.Label(new Rect(infoX - 3, y + 47, 100, 23), Mathf.CeilToInt(unit.Hp) + " HP", small);
-                DrawDamage(unit, x, y - 42);
+                DrawHeroes(540, 960);
+
+                return;
             }
-            GUI.Label(new Rect(24, 635, 492, 48), battle.Result, small);
-            GUI.enabled = battle.Gold >= battle.Cost && battle.Experience >= battle.XpCost;
-            if (GUI.Button(new Rect(24, 690, 492, 48), "Team level +1   /   " + battle.Cost + " G + " + battle.XpCost + " XP", button)) battle.Upgrade();
-            GUI.enabled = battle.Farming;
-            if (GUI.Button(new Rect(24, 748, 492, 48), "Retry: " + battle.StageName(battle.Next), button))
-            { battle.Retry(); accumulator = 0; restartDelay = 0; }
-            GUI.enabled = true;
-            if (GUI.Button(new Rect(24, 806, 238, 44), paused ? "Resume" : "Pause", button)) paused = !paused;
-            GUI.enabled = !battle.Finished;
-            if (GUI.Button(new Rect(278, 806, 238, 44), "Test: force defeat", button)) battle.ForceTimeout();
-            GUI.enabled = true;
-            if (GUI.Button(new Rect(24, 862, 492, 42), "Formation", button)) OpenFormation();
-            GUI.Label(new Rect(24, 911, 492, 76),
-                "Basic attacks only. Session-only progress.", small);
-            GUI.matrix = oldMatrix;
+            DrawBattleGround(540, 960);
+            GUI.Label(new Rect(24, 12, 330, 42), "Castle Gate", title);
+            if (GUI.Button(new Rect(393, 15, 123, 38), "Menu", button)) OpenMenu();
+            DrawStage(new Rect(24, 62, 492, 43));
+            DrawWallet(new Rect(24, 121, 267, 38));
+            DrawTimer(new Rect(302, 118, 214, 44));
+            DrawBattlefield(new Rect(24, 184, 492, 440));
+            DrawBattleUnits();
+            DrawBattleStatus(new Rect(24, 639, 492, 51));
+            DrawTeamUpgrade(new Rect(24, 707, 492, 56));
+            DrawBattleRetry(new Rect(24, 774, 492, 49));
+            if (GUI.Button(new Rect(24, 834, 492, 49), "Heroes", button)) OpenHeroes();
+            DrawDefeatTest(new Rect(324, 903, 192, 33));
+
         }
 
         private void DrawLandscape()
         {
-            Fill(new Rect(0, 0, 960, 540), new Color(0.055f, 0.08f, 0.13f));
-            GUI.Label(new Rect(18, 8, 295, 38), "AFK TRIAL", title);
-            if (GUI.Button(new Rect(830, 10, 115, 35), "Formation", button)) OpenFormation();
-            GUI.Label(new Rect(184, 12, 345, 32), battle.StageName(battle.Stage) +
-                (battle.Farming ? "  [FARM]" : "  [CHALLENGE]"), label);
-            GUI.Label(new Rect(540, 12, 286, 32), $"Gold {battle.Gold}    XP {battle.Experience}    Team Lv.{battle.Level}", label);
-            Fill(new Rect(122, 58, 716, 358), new Color(0.09f, 0.14f, 0.21f));
-            for (int i = 0; i < battle.Units.Count; i++)
-            {
-                TrialBattle.Unit unit = battle.Units[i];
-                float x = 480 + unit.Position.x * 138;
-                float y = 237 - unit.Position.y * 94;
-                Color team = unit.Ally ? new Color(0.2f, 0.8f, 0.85f) : new Color(1, 0.4f, 0.35f);
-                if (unit.Ally) DrawHero(i, unit, new Rect(x - 60, y - 55, 120, 110));
-                else
-                {
-                    bool hit = battle.Elapsed - unit.LastHitTime < 0.15f;
-                    Fill(new Rect(x - 24, y - 24, 48, 48), !unit.Alive ? Color.gray : hit ? Color.white : team);
-                }
-                DrawHitFlash(unit, x, y, battle.Data.LandscapeSize);
-                float panelX = unit.Ally ? 12 : 848;
-                float panelY = 350 - (i % 3) * 113;
-                GUI.Label(new Rect(panelX, panelY - 34, 112, 34), unit.Name, small);
-                Fill(new Rect(panelX, panelY, 100, 7), Color.black);
-                Fill(new Rect(panelX, panelY, 100 * unit.Hp / unit.MaxHp, 7), team);
-                GUI.Label(new Rect(panelX, panelY + 8, 104, 25), Mathf.CeilToInt(unit.Hp) + " HP", small);
-                DrawDamage(unit, x, y - (unit.Ally ? 56 : 24));
-            }
-            GUI.Label(new Rect(16, 424, 470, 32), battle.Result, label);
-            GUI.Label(new Rect(515, 424, 430, 32), $"Time {Mathf.Max(0, battle.Limit - battle.Elapsed):F1}    Battle Lv.{battle.BattleLevel}" +
-                (paused ? "    PAUSED" : ""), label);
-            GUI.enabled = battle.Gold >= battle.Cost && battle.Experience >= battle.XpCost;
-            if (GUI.Button(new Rect(16, 470, 320, 50), $"Team level +1 / {battle.Cost} G + {battle.XpCost} XP", button)) battle.Upgrade();
-            GUI.enabled = battle.Farming;
-            if (GUI.Button(new Rect(348, 470, 260, 50), "Retry: " + battle.StageName(battle.Next), button))
-            { battle.Retry(); accumulator = 0; restartDelay = 0; }
-            GUI.enabled = true;
-            if (GUI.Button(new Rect(620, 470, 120, 50), paused ? "Resume" : "Pause", button)) paused = !paused;
-            GUI.enabled = !battle.Finished;
-            if (GUI.Button(new Rect(752, 470, 192, 50), "Test: force defeat", button)) battle.ForceTimeout();
-            GUI.enabled = true;
+            DrawBattleGround(960, 540);
+            GUI.Label(new Rect(13, 9, 175, 41), "Castle Gate", title);
+            DrawStage(new Rect(200, 7, 330, 42));
+            DrawWallet(new Rect(552, 10, 265, 35));
+            if (GUI.Button(new Rect(829, 9, 118, 38), "Menu", button)) OpenMenu();
+            DrawBattlefield(new Rect(122, 58, 716, 358));
+            DrawFlankHeader(8, true);
+            DrawFlankHeader(844, false);
+            DrawBattleUnits();
+            DrawBattleStatus(new Rect(12, 423, 555, 41));
+            DrawTimer(new Rect(585, 423, 362, 41));
+            DrawTeamUpgrade(new Rect(12, 477, 273, 49));
+            DrawBattleRetry(new Rect(296, 477, 258, 49));
+            if (GUI.Button(new Rect(565, 477, 196, 49), "Heroes", button)) OpenHeroes();
+            DrawDefeatTest(new Rect(776, 486, 171, 32));
         }
 
-        private void DrawHero(int slot, TrialBattle.Unit unit, Rect area)
+        private void PrepareFieldDrawOrder()
         {
+            fieldDrawOrder.Clear();
+            for (int slot = 0; slot < battle.Units.Count; slot++)
+            {
+                Vector2 position = battle.Units[slot].Position;
+                fieldDrawOrder.Add(sideBattle
+                    ? (slot, 480 + position.x * 138, 269 - position.y * 68)
+                    : (slot, 270 + position.y * 95, 396 - position.x * 54));
+            }
+            // IMGUI paints back to front. Keep the original slot order when ground positions are level.
+            fieldDrawOrder.Sort((a, b) =>
+            {
+                int byHeight = a.y.CompareTo(b.y);
+                return byHeight != 0 ? byHeight : a.slot.CompareTo(b.slot);
+            });
+        }
+
+        private void DrawBattleUnits()
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            PrepareFieldDrawOrder();
+            foreach (var entry in fieldDrawOrder)
+                DrawCombatant(entry.slot, battle.Units[entry.slot], entry.x, entry.y);
+
+            // Overlapping rigs and their weapon trails must be behind every victim's hit slash.
+            float flashSize = sideBattle ? battle.Data.LandscapeSize : battle.Data.PortraitSize;
+            foreach (var entry in fieldDrawOrder)
+                DrawHitFlash(battle.Units[entry.slot], entry.x, entry.y, flashSize);
+
+            foreach (var entry in fieldDrawOrder)
+            {
+                var unit = battle.Units[entry.slot];
+                if (sideBattle) DrawFlankUnit(unit, entry.slot % 3);
+                else
+                {
+                    DrawHp(new Rect(entry.x - 39, entry.y - 44, 78, 8), unit);
+                    DrawFieldName(new Rect(entry.x - 54, entry.y + 29, 108, 35), unit);
+                }
+            }
+            foreach (var entry in fieldDrawOrder)
+            {
+                var unit = battle.Units[entry.slot];
+                float headOffset = sideBattle ? (unit.Ally || !string.IsNullOrEmpty(unit.Stats.Animation) ? 56 : 24) : 42;
+                DrawDamage(unit, entry.x, entry.y - headOffset);
+            }
+        }
+
+        private Rect CombatantArea(float x, float y) => sideBattle
+            ? new Rect(x - 60, y - 55, 120, 110) : new Rect(x - 38, y - 41, 76, 76);
+
+        private void DrawCombatant(int index, TrialBattle.Unit unit, float x, float y)
+        {
+            if (!unit.Ally && string.IsNullOrEmpty(unit.Stats.Animation))
+            {
+                bool hit = BattleAnimationTime - unit.LastHitTime < 0.15f;
+                Color tint = unit.Alive ? new Color(1, 0.4f, 0.35f) : Color.gray;
+                Fill(new Rect(x - 24, y - 24, 48, 48), hit && (unit.Alive || !sideBattle) ? Color.white : tint);
+                return;
+            }
+            var area = CombatantArea(x, y);
             Color previous = GUI.color;
             GUI.color = unit.Alive ? Color.white : Color.gray;
-            var portrait = portraits[battle.HeroAt(slot)];
-            if (rigs.TryGetValue(unit.Stats.Animation, out var rig)) rig.Draw(area, unit, battle.Elapsed, portrait);
+            var portrait = unit.Ally ? portraits[battle.HeroAt(index)] : null;
+            if (rigs.TryGetValue(unit.Stats.Animation, out var rig)) rig.Draw(area, unit, BattleAnimationTime, portrait);
             else GUI.DrawTexture(area, portrait, ScaleMode.ScaleToFit);
             GUI.color = previous;
         }
 
-        private void OpenFormation()
+        private enum HeroView { List, Info, Formation, Menu, GearPicker }
+        private HeroView heroView;
+
+        private void OpenHeroes()
         {
-            for (int i = 0; i < draft.Length; i++) draft[i] = battle.HeroAt(i);
-            selectedSlot = 0;
+            featurePage = -1;
+            heroView = HeroView.List;
+            heroesFromMenu = false;
             editing = true;
         }
 
-        private void DrawFormation(int width, int height)
+        private void DrawHeroes(int width, int height)
         {
-            Fill(new Rect(0, 0, width, height), new Color(0.055f, 0.08f, 0.13f));
-            GUI.Label(new Rect(20, 12, width - 40, 40), "Formation", title);
-            GUI.Label(new Rect(20, 54, width - 40, 28), "Choose a slot, then a hero.", label);
-            float slotWidth = (width - 52) / 3f;
-            for (int i = 0; i < draft.Length; i++)
+
+            if (formationName == null)
+                formationName = new GUIStyle(small) { alignment = TextAnchor.MiddleCenter };
+            if (featurePage >= 0) { DrawFeatureScreen(width, height); return; }
+            DrawKnightBackdrop(width, height);
+            if (heroView == HeroView.Menu) { DrawMenu(width, height); return; }
+            if (heroView == HeroView.Formation) { DrawHeroSlots(width, height); return; }
+            if (heroView == HeroView.GearPicker)
             {
-                var rect = new Rect(20 + i * (slotWidth + 6), 90, slotWidth, 54);
-                if (GUI.Toggle(rect, selectedSlot == i, $"Slot {i + 1}  /  {battle.Heroes[draft[i]]}", button))
-                    selectedSlot = i;
+                GUI.Label(new Rect(20, 12, width - 180, 42), battle.Heroes[featureHero], title);
+                if (GUI.Button(new Rect(width - 145, 12, 125, 42), "Hero info", button)) heroView = HeroView.Info;
+                GUI.BeginGroup(new Rect((width - 500) / 2f, (height - 410) / 2f, 500, 410));
+                DrawInventory(true);
+                GUI.EndGroup();
+                return;
             }
+            if (heroView == HeroView.Info)
+            {
+                DrawKnightPanel(new Rect((width - 516) / 2f, (height - 416) / 2f, 516, 408));
+                GUI.Label(new Rect(20, 12, 280, 42), "Knight dossier", title);
+                if (GUI.Button(new Rect(width - 145, 12, 125, 42), "Heroes", button)) heroView = HeroView.List;
+                GUI.BeginGroup(new Rect((width - 500) / 2f, (height - 410) / 2f, 500, 410));
+                DrawSkillPage();
+                GUI.EndGroup();
+                if (GUI.Button(new Rect(width / 2f - 235, height - 58, 220, 42), "Edit formation", button))
+                    BeginHeroPlacement();
+                if (GUI.Button(new Rect(width / 2f + 15, height - 58, 220, 42), "OK - Return to battle", button))
+                    editing = false;
+                return;
+            }
+            GUI.Label(new Rect(20, 12, 240, 42), "Hero roster", title);
+            DrawRosterCount(new Rect(width - 290, 12, 140, 42));
+
+            if (GUI.Button(new Rect(width - 140, 12, 120, 42), heroesFromMenu ? "Menu" : "Battle", button))
+            {
+                if (heroesFromMenu) OpenMenu(); else editing = false;
+            }
+            DrawHeroGrid(width, 70, height - 90, false);
+        }
+
+        private void DrawHeroGrid(int width, float top, float availableHeight, bool placing)
+        {
             int columns = sideBattle ? 5 : 2;
             int rows = (portraits.Length + columns - 1) / columns;
             float cardWidth = (width - 40f - (columns - 1) * 6) / columns;
-            float cardHeight = (height - 236f) / rows - 6;
+            float cardHeight = availableHeight / rows - 6;
             for (int hero = 0; hero < portraits.Length; hero++)
             {
                 float x = 20 + hero % columns * (cardWidth + 6);
-                float y = 158 + hero / columns * (cardHeight + 6);
-                int occupied = System.Array.IndexOf(draft, hero);
-                if (GUI.Button(new Rect(x, y, cardWidth, cardHeight), GUIContent.none, button))
+                float y = top + hero / columns * (cardHeight + 6);
+                var card = new Rect(x, y, cardWidth, cardHeight);
+                GUI.enabled = battle.Owned(hero);
+                if (GUI.Button(card, GUIContent.none, GUIStyle.none))
                 {
-                    if (occupied >= 0) draft[occupied] = draft[selectedSlot];
-                    draft[selectedSlot] = hero;
+                    if (placing) PlaceHero(hero, selectedSlot);
+                    else { featureHero = hero; selectedSkill = -1; heroView = HeroView.Info; }
                 }
+                Fill(new Rect(x + 4, y + 3, cardWidth - 8, cardHeight - 6), new Color(0.065f, 0.12f, 0.17f, 0.92f));
+                GUI.DrawTexture(card, cardFrame);
                 GUI.DrawTexture(new Rect(x + 5, y + 5, cardWidth - 10, cardHeight - 36),
                     portraits[hero], ScaleMode.ScaleToFit);
-                string prefix = occupied < 0 ? "" : $"[{occupied + 1}] ";
-                GUI.Label(new Rect(x + 8, y + cardHeight - 28, cardWidth - 12, 24),
-                    prefix + battle.Heroes[hero], small);
+                for (int slot = 0; slot < draft.Length; slot++)
+                    if ((placing ? draft[slot] : battle.HeroAt(slot)) == hero)
+                        GUI.DrawTexture(new Rect(x + 6, y + 5, 28, 32), deploymentBadges[slot]);
+                var role = battle.Data.Heroes[hero].Role;
+                if (role != TrialData.Role.None && battle.Owned(hero))
+                    Picture("RoleUI/" + RoleIcons[(int)role - 1], card.xMax - 31, y + 6, 24, 24);
+                if (placing && selectedSlot >= 0 && hero == draft[selectedSlot]) GUI.DrawTexture(card, cardSelection);
+                GUI.Label(new Rect(x + 8, card.yMax - 28, cardWidth - 16, 25), battle.Owned(hero) ? battle.Heroes[hero] : "Locked", formationName);
+                GUI.enabled = true;
             }
-            if (GUI.Button(new Rect(20, height - 60, 120, 42), "Cancel", button)) editing = false;
+        }
+
+        private void BeginHeroPlacement()
+        {
+            for (int slot = 0; slot < draft.Length; slot++) draft[slot] = battle.HeroAt(slot);
+            selectedSlot = -1;
+            heroView = HeroView.Formation;
+        }
+
+        private void SelectHeroSlot(int slot)
+        {
+            for (int i = 0; i < draft.Length; i++) draft[i] = battle.HeroAt(i);
+            PlaceHero(featureHero, slot);
+            selectedSlot = slot;
+        }
+
+        private void PlaceHero(int hero, int slot)
+        {
+            int occupied = System.Array.IndexOf(draft, hero);
+            if (occupied >= 0) draft[occupied] = draft[slot];
+            draft[slot] = hero;
+        }
+
+        private void DrawHeroSlots(int width, int height)
+        {
+            GUI.Label(new Rect(20, 12, width - 40, 42), "Edit formation", title);
+            GUI.Label(new Rect(20, 65, width - 40, 40), "Choose a slot for " + battle.Heroes[featureHero], label);
+            float w = (width - 56f) / draft.Length;
+            for (int i = 0; i < draft.Length; i++)
+            {
+                var card = new Rect(20 + i * (w + 8), (height - 220) / 2f, w, 220);
+                if (GUI.Button(card, GUIContent.none, GUIStyle.none)) SelectHeroSlot(i);
+                GUI.DrawTexture(card, cardFrame);
+                GUI.DrawTexture(new Rect(card.x + 8, card.y + 8, w - 16, 170), portraits[draft[i]], ScaleMode.ScaleToFit);
+                GUI.DrawTexture(new Rect(card.x + 8, card.y + 8, 28, 32), deploymentBadges[i]);
+                if (selectedSlot == i) GUI.DrawTexture(card, cardSelection);
+                GUI.Label(new Rect(card.x + 5, card.yMax - 33, w - 10, 28), battle.Heroes[draft[i]], formationName);
+            }
+            DrawSynergyLine(20, 108, "Active", battle.ActiveSynergy);
+            if (selectedSlot >= 0) DrawSynergyLine(20, (height + 220) / 2f + 12, "After applying", battle.FormationSynergy(draft));
+            if (GUI.Button(new Rect(20, height - 60, 120, 42), "Cancel", button)) heroView = HeroView.Info;
+            GUI.enabled = selectedSlot >= 0 && battle.HeroAt(selectedSlot) != featureHero;
             if (GUI.Button(new Rect(width - 245, height - 60, 225, 42), "Apply & restart battle", button))
             {
                 battle.ApplyFormation(draft);
                 accumulator = restartDelay = 0;
                 editing = false;
             }
+            GUI.enabled = true;
         }
-
         private void DrawHitFlash(TrialBattle.Unit unit, float x, float y, float size)
         {
             if (unit.LastDamage <= 0 || Event.current.type != EventType.Repaint) return;
             var data = battle.Data;
-            float age = battle.Elapsed + restartDelay - unit.LastHitTime;
+            float age = BattleAnimationTime - unit.LastHitTime;
             int frame = Mathf.FloorToInt(age * data.HitFps);
             if (frame < 0 || frame >= data.HitFrames) return;
             var uv = new Rect((frame % data.HitColumns) / (float)data.HitColumns,
                 1 - (frame / data.HitColumns + 1f) / data.HitRows, 1f / data.HitColumns, 1f / data.HitRows);
-            GUI.DrawTextureWithTexCoords(new Rect(x - size / 2, y - size / 2, size, size), hitFlash, uv);
+            var topLeft = new Vector2(x - size / 2, y - size / 2);
+            if (unit.LastHitHeight > 0)
+            {
+                var contact = TrialCharacterRig.ScreenPointAtHeight(CombatantArea(x, y), unit.LastHitHeight, out _);
+                topLeft = contact - data.HitSparkPivot * size;
+            }
+            GUI.DrawTextureWithTexCoords(new Rect(topLeft, new Vector2(size, size)), hitFlash, uv);
         }
 
         private void DrawDamage(TrialBattle.Unit unit, float x, float headY)
         {
-            float age = battle.Elapsed + restartDelay - unit.LastHitTime;
+            float age = BattleAnimationTime - unit.LastHitTime;
             if (age >= 0.7f || unit.LastDamage <= 0) return;
-            Rect bounds = new Rect(x - 45, headY - 30 - age * 22, 90, 30);
+            float top = Mathf.Max(sideBattle ? 58 : 184, headY - 30 - age * 22);
+            Rect bounds = new Rect(x - 45, top, 90, 30);
             GUI.Label(bounds, "-" + unit.LastDamage.ToString("0.##"), damage);
         }
 

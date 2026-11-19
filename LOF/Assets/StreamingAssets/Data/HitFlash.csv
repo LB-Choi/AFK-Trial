@@ -1,2 +1,2 @@
-﻿texture,columns,rows,frames,fps,landscapeSize,portraitSize
-HitFlash,6,2,12,30,98,76
+﻿texture,columns,rows,frames,fps,landscapeSize,portraitSize,sparkX,sparkY
+HitFlash,6,2,12,30,98,76,0.51,0.31
