@@ -7,23 +7,36 @@ namespace AFKTrial
     {
         None, Wave, Slow, Power, Pierce, Sunder, CurrentHp, Weaken, TeamHaste, Rally,
         Fortify, Guard, Stun, Mend, TeamArmor, Double, DoublePower, SwordOath, Taunt,
-        Blind, Equalize, MissingHp, Frenzy, Flurry
+        Blind, Equalize, MissingHp, Frenzy, Flurry, ArmorStrike, TimedTaunt, DrainCurrentHp
     }
 
     public sealed partial class TrialBattle
     {
+        public enum SkillCue
+        {
+            AttackUp, DefenseUp, ChainHeal, DefenseDown, AttackDown, Taunt,
+            KatanaCombo, FrostSwordEnchant, StunStars, Bleeding
+        }
+
+        // One notification per affected unit, timestamped on the battle clock.
+        public event Action<SkillCue, Unit, Unit, float> SkillApplied;
+
         internal struct TimedBonus
         {
             private float amount, end;
+            public float Until => end;
             public float Value(float now) => now < end ? amount : 0;
             public void Set(float value, float until) { amount = value; end = until; }
         }
 
         internal sealed class SkillState
         {
-            internal TimedBonus AttackUp, AttackDown, DefenseUp, DefenseDown, Haste, Slow, Burst;
+            internal TimedBonus AttackUp, AttackDown, DefenseUp, DefenseDown, Haste, Slow;
             internal float StunnedUntil, HealLeft, HealRate;
-            internal bool Block, Blinded;
+            internal float BleedUntil;
+            internal float NextBleedTick;
+            internal float DamageReduction;
+            internal float BlindUntil, TauntUntil;
             internal Unit Taunter;
             internal readonly float[] LastCast = new float[3];
             internal readonly int[] Ranks = new int[3];
@@ -31,9 +44,12 @@ namespace AFKTrial
         }
 
         private float AttackPower(Unit unit) => unit.Attack * (1 + unit.Skills.AttackUp.Value(Elapsed)) *
-            (1 + unit.Skills.Burst.Value(Elapsed)) * (1 - unit.Skills.AttackDown.Value(Elapsed));
+            Mathf.Max(0f, 1 - unit.Skills.AttackDown.Value(Elapsed));
 
-        private float SpeedMultiplier(Unit unit) => (1 + unit.Skills.Haste.Value(Elapsed)) * (1 - unit.Skills.Slow.Value(Elapsed));
+        private float SpeedMultiplier(Unit unit) => (1 + unit.Skills.Haste.Value(Elapsed)) * Mathf.Max(0f, 1 - unit.Skills.Slow.Value(Elapsed));
+
+        private float EffectiveArmor(Unit unit) => unit.Armor * (1 + unit.Skills.DefenseUp.Value(Elapsed)) *
+            Mathf.Max(0f, 1 - unit.Skills.DefenseDown.Value(Elapsed));
 
         private void UpdateSkillEffects(Unit unit, float dt)
         {
@@ -45,8 +61,47 @@ namespace AFKTrial
 
         private void Strike(Unit caster, Unit target, float amount, PendingHit[] hits, bool pierce = false)
         {
-            if (target.Skills.Block) { target.Skills.Block = false; return; }
             hits[Units.IndexOf(target)].Add(caster, amount, pierce);
+        }
+
+        private void BasicStrike(Unit caster, PendingHit[] hits)
+        {
+            var target = caster.Target;
+            int every = caster.Stats.SkillEvery;
+            bool special = every > 0 && caster == ActiveBoss && (caster.Attacks + 1) % every == 0;
+            bool bash = special && caster.Stats.Id == "boss";
+            int round = ActiveStage > 0 ? (ActiveStage - 1) / Data.RoundLength + 1 : 1;
+            Strike(caster, target, AttackPower(caster) * (bash ? round : 1), hits);
+            if (!special) return;
+            if (bash)
+            {
+                target.Skills.StunnedUntil = Elapsed + .3f;
+                if (target.WindingUp) { target.WindingUp = false; target.SwingStart = float.NegativeInfinity; }
+                SkillApplied?.Invoke(SkillCue.StunStars, caster, target, Elapsed);
+            }
+            else if (caster.Stats.Id == "boss2")
+            {
+                if (target.Skills.NextBleedTick == 0f) target.Skills.NextBleedTick = Elapsed + 1f;
+                target.Skills.BleedUntil = Elapsed + round;
+                SkillApplied?.Invoke(SkillCue.Bleeding, caster, target, Elapsed);
+            }
+        }
+
+        private void TickBleed(Unit target)
+        {
+            var state = target.Skills;
+            const float tolerance = .0001f;
+            if (state.NextBleedTick == 0f) return;
+            while (state.NextBleedTick <= Elapsed + tolerance && state.NextBleedTick <= state.BleedUntil + tolerance)
+            {
+                float damage = target.Hp * .001f * target.DamageTakenMultiplier;
+                target.Hp -= damage;
+                target.LastDamage = damage;
+                target.LastHitTime = Elapsed;
+                target.LastDamageWasBleed = true;
+                state.NextBleedTick += 1f;
+            }
+            if (state.BleedUntil <= Elapsed + tolerance) state.NextBleedTick = 0f;
         }
 
         private void TryCastSkill(Unit caster, PendingHit[] hits)
@@ -57,9 +112,7 @@ namespace AFKTrial
                 var skill = Data.Skills[caster.HeroIndex, slot];
                 if (skill.Effect == SkillEffect.None) continue;
                 int rank = state.Ranks[slot];
-                bool reducesInterval = skill.Effect == SkillEffect.Double || skill.Effect == SkillEffect.Equalize ||
-                    skill.Effect == SkillEffect.Guard && caster.Stats.Id == "tower_knight";
-                int interval = Math.Max(1, skill.Interval - (reducesInterval ? rank : 0));
+                int interval = skill.Interval;
                 if (slot == 0)
                 {
                     if (caster.Attacks - state.LastAttackCount < interval) continue;
@@ -91,13 +144,24 @@ namespace AFKTrial
                 case SkillEffect.Power:
                 case SkillEffect.SwordOath:
                     state.AttackUp.Set(fraction, Elapsed + (effect == SkillEffect.Power ? 6 : 7));
+                    SkillApplied?.Invoke(SkillCue.AttackUp, caster, caster, Elapsed);
+                    if (effect == SkillEffect.Power && caster.Stats.Id == "ice_knight")
+                        SkillApplied?.Invoke(SkillCue.FrostSwordEnchant, caster, caster, Elapsed);
                     break;
                 case SkillEffect.Pierce: Strike(caster, target, attack, hits, true); break;
-                case SkillEffect.Sunder: target.Skills.DefenseDown.Set(fraction, Elapsed + 3); break;
+                case SkillEffect.ArmorStrike: Strike(caster, target, attack + EffectiveArmor(caster) * rank, hits); break;
+                case SkillEffect.DrainCurrentHp:
+                    hits[Units.IndexOf(target)].HealthLoss += target.Hp * Mathf.Min(1f, fraction) * caster.RankMultiplier;
+                    break;
+                case SkillEffect.Sunder:
+                    target.Skills.DefenseDown.Set(fraction, Elapsed + 3);
+                    SkillApplied?.Invoke(SkillCue.DefenseDown, caster, target, Elapsed);
+                    break;
                 case SkillEffect.CurrentHp: Strike(caster, target, target.Hp * fraction, hits, true); break;
                 case SkillEffect.Weaken:
                     Strike(caster, target, attack, hits);
                     target.Skills.AttackDown.Set(fraction, Elapsed + 3);
+                    SkillApplied?.Invoke(SkillCue.AttackDown, caster, target, Elapsed);
                     break;
                 case SkillEffect.TeamHaste:
                 case SkillEffect.TeamArmor:
@@ -107,30 +171,57 @@ namespace AFKTrial
                     {
                         if (!ally.Ally || !ally.Alive) continue;
                         if (effect == SkillEffect.TeamHaste) ally.Skills.Haste.Set(fraction, Elapsed + 4);
-                        if (effect == SkillEffect.TeamArmor) ally.Skills.DefenseUp.Set(fraction, Elapsed + 5);
-                        if (effect == SkillEffect.Rally && ally != caster) ally.Skills.AttackUp.Set(fraction, Elapsed + 6);
+                        if (effect == SkillEffect.TeamArmor)
+                        {
+                            ally.Skills.DefenseUp.Set(fraction, Elapsed + 5);
+                            SkillApplied?.Invoke(SkillCue.DefenseUp, caster, ally, Elapsed);
+                        }
+                        if (effect == SkillEffect.Rally && ally != caster)
+                        {
+                            ally.Skills.AttackUp.Set(fraction, Elapsed + 6);
+                            SkillApplied?.Invoke(SkillCue.AttackUp, caster, ally, Elapsed);
+                        }
                         if (effect == SkillEffect.Mend)
                         {
                             ally.Skills.HealRate = (ally.MaxHp - ally.Hp) * fraction / 4;
                             ally.Skills.HealLeft = 4;
+                            if (ally.Skills.HealRate > 0)
+                                SkillApplied?.Invoke(SkillCue.ChainHeal, caster, ally, Elapsed);
                         }
                     }
                     break;
-                case SkillEffect.Fortify: state.DefenseUp.Set(fraction, Elapsed + 5); break;
-                case SkillEffect.Guard: state.Block = true; break;
+                case SkillEffect.Fortify:
+                    state.DefenseUp.Set(fraction, Elapsed + (caster.Stats.Id == "tower_knight" ? 4 : 5));
+                    SkillApplied?.Invoke(SkillCue.DefenseUp, caster, caster, Elapsed);
+                    break;
+                case SkillEffect.Guard: state.DamageReduction = Mathf.Clamp01(fraction); break;
                 case SkillEffect.Stun:
                     Strike(caster, target, attack, hits);
                     target.Skills.StunnedUntil = Elapsed + (boss ? 0.1f : 0.2f) * rank;
+                    SkillApplied?.Invoke(SkillCue.StunStars, caster, target, Elapsed);
                     break;
-                case SkillEffect.Double: Strike(caster, target, attack * 2, hits); break;
-                case SkillEffect.DoublePower: state.Burst.Set(1, Elapsed + rank); break;
+                case SkillEffect.Double:
+                    Strike(caster, target, attack * rank, hits);
+                    if (caster.Stats.Id == "katana_knight")
+                        SkillApplied?.Invoke(SkillCue.KatanaCombo, caster, target, Elapsed);
+                    break;
+                case SkillEffect.DoublePower:
+                    state.AttackUp.Set(1, Elapsed + rank);
+                    SkillApplied?.Invoke(SkillCue.AttackUp, caster, caster, Elapsed);
+                    break;
                 case SkillEffect.Taunt:
+                case SkillEffect.TimedTaunt:
                 case SkillEffect.Blind:
                     foreach (var foe in Units)
                         if (!foe.Ally && foe.Alive)
                         {
-                            if (effect == SkillEffect.Blind) foe.Skills.Blinded = true;
-                            else foe.Skills.Taunter = caster;
+                            if (effect == SkillEffect.Blind) foe.Skills.BlindUntil = Elapsed + .1f * rank;
+                            else
+                            {
+                                foe.Skills.Taunter = caster;
+                                foe.Skills.TauntUntil = effect == SkillEffect.TimedTaunt ? Elapsed + .2f * rank : 0f;
+                                SkillApplied?.Invoke(SkillCue.Taunt, caster, foe, Elapsed);
+                            }
                         }
                     break;
                 case SkillEffect.Equalize:
@@ -138,12 +229,13 @@ namespace AFKTrial
                     foreach (var ally in Units)
                         if (ally.Ally && ally.Alive) { hp += ally.Hp; capacity += ally.MaxHp; }
                     foreach (var ally in Units)
-                        if (ally.Ally && ally.Alive) ally.Hp = ally.MaxHp * (hp / capacity);
+                        if (ally.Ally && ally.Alive) ally.Hp = ally.MaxHp * Mathf.Min(1f, hp * (1f + .1f * rank) / capacity);
                     break;
                 case SkillEffect.MissingHp: Strike(caster, target, (target.MaxHp - target.Hp) * fraction, hits, true); break;
                 case SkillEffect.Frenzy: state.Haste.Set(rank - 1, Elapsed + 5); break;
                 case SkillEffect.Flurry:
-                    for (int i = 0; i < 2 * rank; i++) Strike(caster, target, attack, hits);
+                    long strikes = 2L * rank;
+                    Strike(caster, target, attack * strikes, hits);
                     break;
             }
         }

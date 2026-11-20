@@ -8,12 +8,13 @@ namespace AFKTrial
     {
         private TrialBattle battle;
         private readonly Dictionary<string, TrialCharacterRig> rigs = new Dictionary<string, TrialCharacterRig>();
-        private readonly List<(int slot, float x, float y)> fieldDrawOrder = new List<(int, float, float)>();
+        private readonly List<(int slot, float x, float y, bool alive)> fieldDrawOrder = new List<(int, float, float, bool)>();
         private Texture2D[] portraits;
         private Texture2D hitFlash;
         private string loadError;
         private readonly int[] draft = new int[3];
         private bool editing;
+        private bool atTitle, showRecruit;
         private int selectedSlot;
         private bool sideBattle;
         private float accumulator, restartDelay;
@@ -34,6 +35,8 @@ namespace AFKTrial
         {
             sideBattle = gameObject.scene.name == "SideBattle";
             resultDungeon = null;
+            atTitle = true;
+            showRecruit = false;
             try
             {
                 var data = TrialData.Load();
@@ -47,7 +50,8 @@ namespace AFKTrial
                 foreach (var entry in data.RigResources)
                     rigs.Add(entry.Key, new TrialCharacterRig(entry.Value));
                 battle = new TrialBattle(data);
-                OpenProgressSession();
+                LoadSkillEffects();
+                battle.SkillApplied += PlaySkillEffect;
                 loadError = null;
             }
             catch (System.Exception error)
@@ -71,7 +75,7 @@ namespace AFKTrial
         {
             if (battle == null || progressLock == null || suspended) return;
             if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
-            if (HasPendingIdleReward || HasDungeonResult) return;
+            if (HasPendingIdleReward || HasDungeonResult || showRecruit) return;
             if (battle.Finished)
             {
                 if (battle.ActiveDungeon != null) { ReturnFromDungeon(); return; }
@@ -86,7 +90,11 @@ namespace AFKTrial
             {
                 accumulator = 0;
                 if (battle.ActiveDungeon != null) ReturnFromDungeon();
-                else CheckpointProgress(battle.Won);
+                else
+                {
+                    CheckpointProgress(battle.Won);
+                    showRecruit = battle.RecruitReward.HasValue;
+                }
             }
         }
 
@@ -127,6 +135,16 @@ namespace AFKTrial
             float scale = Mathf.Min((float)Screen.width / width, (float)Screen.height / height);
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - width * scale) / 2,
                 (Screen.height - height * scale) / 2, 0), Quaternion.identity, Vector3.one * scale);
+            if (atTitle)
+            {
+                DrawEntryScreen(width, height);
+                return;
+            }
+            if (showRecruit)
+            {
+                DrawRecruitScreen(width, height);
+                return;
+            }
             if (HasPendingIdleReward)
             {
                 DrawIdleReturnPopup(width, height);
@@ -143,6 +161,50 @@ namespace AFKTrial
                 DrawLiveBattle(width, height);
             }
             if (HasDungeonResult) DrawDungeonResult(width, height);
+        }
+
+        private void BeginPlay()
+        {
+            try
+            {
+                OpenProgressSession();
+                atTitle = false;
+            }
+            catch (System.Exception error)
+            {
+                loadError = error.Message;
+                Debug.LogException(error);
+            }
+        }
+
+        private void DrawEntryScreen(int width, int height)
+        {
+            GUI.DrawTexture(new Rect(0, 0, width, height), FeatureTexture("KnightUI/ChapterHall"), ScaleMode.ScaleAndCrop);
+            ManuscriptFade(new Rect(0, 0, width, height), new Color32(11, 18, 31, 55), new Color32(7, 14, 25, 220));
+            DrawHallKnight(1, width * .51f, height * .87f, height * .54f, true);
+            DrawHallKnight(2, width * .87f, height * .89f, height * .64f, true);
+            DrawHallKnight(0, width * .72f, height * .96f, height * .78f, false);
+            float left = width * .075f, top = height * .29f;
+            Picture("KnightUI/OrderSeal", left, top - 52, 48, 48);
+            CourtHeading(new Rect(left, top, width * .48f, 90), "AFK Trial", 64, TextAnchor.MiddleLeft);
+            CourtRule(new Rect(left, top + 91, width * .30f, 1), HallAmber);
+            if (ArcadeTab(new Rect(left, top + 123, 205, 51), "Enter game", true)) BeginPlay();
+            if (loadError != null) GUI.Label(new Rect(left, top + 182, width * .45f, 80), loadError, small);
+        }
+
+        private void DrawRecruitScreen(int width, int height)
+        {
+            var reward = battle.RecruitReward.Value;
+            DrawKnightBackdrop(width, height);
+            float mid = width * .5f;
+            var art = portraits[reward.Hero];
+            GUI.DrawTexture(new Rect(mid - 325, height * .1f, 320, height * .8f), art, ScaleMode.ScaleToFit);
+            ArcadeText(new Rect(mid + 12, height * .33f, 260, 24),
+                reward.IsNew ? "KNIGHT RECRUITED" : "KNIGHT LEVEL UP", 16, HallAmber, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(mid + 12, height * .38f, width * .46f, 67),
+                battle.Heroes[reward.Hero], 39, TextAnchor.MiddleLeft);
+            GUI.Label(new Rect(mid + 14, height * .52f, 232, 32), "Lv. " + reward.Level, label);
+            if (ArcadeTab(new Rect(mid + 12, height * .63f, 194, 48), "Continue", true)) showRecruit = false;
         }
 
         private void DrawLiveBattle(int width, int height)
@@ -181,17 +243,32 @@ namespace AFKTrial
             fieldDrawOrder.Clear();
             for (int slot = 0; slot < battle.Units.Count; slot++)
             {
-                Vector2 position = battle.Units[slot].Position;
-                fieldDrawOrder.Add(sideBattle
-                    ? (slot, 480 + position.x * 141 + position.y * 94, 228 - position.y * 48)
-                    : (slot, 270 + position.y * 110 + Mathf.Clamp(position.x * 75, -55, 55), 398 - position.x * 75));
+                var unit = battle.Units[slot];
+                if (unit.Ally && unit.HeroIndex < 0) continue;
+                var point = UnitScreenPoint(unit);
+                fieldDrawOrder.Add((slot, point.x, point.y, unit.Alive));
             }
-            // IMGUI paints back to front. Keep the original slot order when ground positions are level.
+            // Fallen units are scenery. Living bodies paint back to front at their displayed positions.
             fieldDrawOrder.Sort((a, b) =>
             {
+                int byAlive = a.alive.CompareTo(b.alive);
+                if (byAlive != 0) return byAlive;
                 int byHeight = a.y.CompareTo(b.y);
                 return byHeight != 0 ? byHeight : a.slot.CompareTo(b.slot);
             });
+        }
+
+        private Vector2 UnitScreenPoint(TrialBattle.Unit unit)
+        {
+            var point = FieldPoint(unit.Position);
+            if (sideBattle)
+            {
+                // Give each lane some visual depth without displacing another fighter.
+                float homeY = 228f - (unit.Lane - 1) * battle.Data.LaneSpacing * 48f;
+                point.y = Mathf.Lerp(point.y, homeY, .4f);
+                return new Vector2(Mathf.Clamp(point.x, 73f, 887f), Mathf.Clamp(point.y, 135f, 313f));
+            }
+            return new Vector2(Mathf.Clamp(point.x, 59f, 481f), Mathf.Clamp(point.y, 195f, 596f));
         }
 
         private void DrawBattleUnits()
@@ -200,6 +277,8 @@ namespace AFKTrial
             PrepareFieldDrawOrder();
             foreach (var entry in fieldDrawOrder)
                 DrawCombatant(entry.slot, battle.Units[entry.slot], entry.x, entry.y);
+
+            DrawSkillEffects();
 
             // Overlapping rigs and their weapon trails must be behind every victim's hit slash.
             float flashSize = sideBattle ? battle.Data.LandscapeSize : battle.Data.PortraitSize;
@@ -210,7 +289,7 @@ namespace AFKTrial
             {
                 var unit = battle.Units[entry.slot];
                 if (unit.Alive)
-                    DrawUnitTag(unit, entry.x, entry.y);
+                    DrawUnitHealth(unit, entry.x, entry.y);
             }
             foreach (var entry in fieldDrawOrder)
             {
@@ -222,6 +301,10 @@ namespace AFKTrial
 
         private Rect CombatantArea(float x, float y) => sideBattle
             ? new Rect(x - 73, y - 67, 146, 134) : new Rect(x - 59, y - 61, 118, 118);
+
+        private Vector2 FieldPoint(Vector2 position) => sideBattle
+            ? new Vector2(480 + position.x * 192, 228 - position.y * 48)
+            : new Vector2(270 + position.y * 110 + Mathf.Clamp(position.x * 75, -55, 55), 398 - position.x * 75);
 
         private void DrawCombatant(int index, TrialBattle.Unit unit, float x, float y)
         {
@@ -352,16 +435,16 @@ namespace AFKTrial
         private void DrawHeroSlots(int width, int height)
         {
             GUI.Label(new Rect(20, 12, width - 40, 42), "Edit formation", title);
-            GUI.Label(new Rect(20, 65, width - 40, 40), "Choose a slot for " + battle.Heroes[featureHero], label);
-            float w = (width - 56f) / draft.Length;
+            GUI.Label(new Rect(20, 65, width - 40, 40), "Choose a slot for " + battle.Heroes[featureHero] + "   ·   Center front row deals and takes 20% more damage.", label);
+            var board = new Rect(width * .18f, 148, width * .64f, height - 268);
             for (int i = 0; i < draft.Length; i++)
             {
-                var card = new Rect(20 + i * (w + 8), (height - 220) / 2f, w, 220);
+                var card = FormationSlotRect(board, i);
                 if (GUI.Button(card, GUIContent.none, GUIStyle.none)) SelectHeroSlot(i);
                 DrawRosterCard(card, draft[i], i, selectedSlot == i);
             }
             DrawSynergyLine(20, 108, "Active", battle.ActiveSynergy);
-            if (selectedSlot >= 0) DrawSynergyLine(20, (height + 220) / 2f + 12, "Next battle", battle.FormationSynergy(draft));
+            if (selectedSlot >= 0) DrawSynergyLine(20, board.yMax + 7, "Next battle", battle.FormationSynergy(draft));
             if (GUI.Button(new Rect(20, height - 60, 120, 42), "Cancel", button)) heroView = HeroView.Info;
             GUI.enabled = selectedSlot >= 0 && battle.HeroAt(selectedSlot) != featureHero;
             if (GUI.Button(new Rect(width - 245, height - 60, 225, 42), "Apply next battle", button))
@@ -377,7 +460,7 @@ namespace AFKTrial
 
         private void DrawHitFlash(TrialBattle.Unit unit, float x, float y, float size)
         {
-            if (unit.LastDamage <= 0 || Event.current.type != EventType.Repaint) return;
+            if (unit.LastDamageWasBleed || unit.LastDamage <= 0 || Event.current.type != EventType.Repaint) return;
             var data = battle.Data;
             float age = BattleAnimationTime - unit.LastHitTime;
             int frame = Mathf.FloorToInt(age * data.HitFps);

@@ -155,9 +155,9 @@ namespace AFKTrial
             float floor = dockTop - (portrait ? 68 : 6);
             float center = width * 0.5f;
             float rearHeight = portrait ? 395 : 300;
-            DrawHallKnight(1, width * (portrait ? 0.10f : 0.26f), floor - (portrait ? 110 : 26), rearHeight, true);
+            DrawHallKnight(0, width * (portrait ? 0.10f : 0.26f), floor - (portrait ? 110 : 26), rearHeight, true);
             DrawHallKnight(2, width * 0.76f, floor - (portrait ? 88 : 26), rearHeight, true);
-            DrawHallKnight(0, center, floor, portrait ? 540 : 405, false);
+            DrawHallKnight(1, center, floor, portrait ? 540 : 405, false);
 
             ManuscriptFade(new Rect(0, 0, width, portrait ? 128 : 113),
                 new Color32(10, 15, 28, 238), new Color32(10, 15, 28, 0));
@@ -169,18 +169,19 @@ namespace AFKTrial
             DrawKnightPanel(wallet);
             DrawWallet(new Rect(wallet.x + 9, wallet.y + 2, wallet.width - 14, 33));
 
-            var hero = battle.Data.Heroes[battle.HeroAt(0)];
+            int featured = battle.HeroAt(1) >= 0 ? battle.HeroAt(1) : battle.FirstDeployedHero;
+            var hero = battle.Data.Heroes[featured];
             ManuscriptFade(new Rect(0, dockTop - 150, width, 150),
                 new Color32(12, 16, 27, 0), new Color32(12, 16, 27, 247));
             var nameplate = new Rect(21, dockTop - 86, portrait ? 288 : 337, 78);
             CourtRule(new Rect(nameplate.x, nameplate.y + 3, 63, 1), HallAmber);
             ArcadeText(new Rect(nameplate.x, nameplate.y + 10, nameplate.width, 19),
-                hero.Role.ToString().ToUpperInvariant() + "    /    LV. " + battle.HeroLevel(battle.HeroAt(0)), 12, HallAmber, TextAnchor.MiddleLeft);
+                hero.Role.ToString().ToUpperInvariant() + "    /    LV. " + battle.HeroLevel(featured), 12, HallAmber, TextAnchor.MiddleLeft);
             CourtHeading(new Rect(nameplate.x - 1, nameplate.y + 28, nameplate.width, 47), hero.Name,
                 portrait ? 33 : 39, TextAnchor.MiddleLeft);
             if (GUI.Button(nameplate, GUIContent.none, GUIStyle.none))
             {
-                featureHero = battle.HeroAt(0);
+                featureHero = featured;
                 selectedSkill = -1;
                 heroesFromMenu = true;
                 heroView = HeroView.Info;
@@ -195,6 +196,7 @@ namespace AFKTrial
 
         private void DrawHallKnight(int slot, float center, float baseline, float height, bool behind)
         {
+            if (battle.HeroAt(slot) < 0) return;
             var art = portraits[battle.HeroAt(slot)];
             float width = height * art.width / art.height;
             var tint = GUI.color;
@@ -416,20 +418,20 @@ namespace AFKTrial
             GUI.Label(new Rect(12, 21, 274, 44), skill.Name, label);
             if (GUI.Button(new Rect(297, 18, 30, 30), "X")) selectedSkill = -1;
             string description = string.IsNullOrWhiteSpace(skill.Description) ? "Skill details pending." : skill.Description;
-            description = description.Replace("n%", level + "%").Replace(" n ", " " + level + " ")
+            description = description.Replace("10 x n%", (10L * level) + "%").Replace("n%", level + "%").Replace(" n ", " " + level + " ")
                 .Replace(" n)", " " + level + ")");
             var content = new GUIContent(description);
             float textHeight = Mathf.Max(99, small.CalcHeight(content, 289));
             skillScroll = GUI.BeginScrollView(new Rect(12, 68, 312, 100), skillScroll, new Rect(0, 0, 289, textHeight));
             GUI.Label(new Rect(0, 0, 289, textHeight), content, small);
             GUI.EndScrollView();
-            GUI.Label(new Rect(12, 175, 215, 30), $"Skill level {level} / 5", label);
-            int cost = battle.SkillCost(featureHero, slot);
-            string status = level >= 5 ? "Maximum level" : level >= battle.HeroLevel(featureHero)
+            GUI.Label(new Rect(12, 175, 215, 30), $"Skill level {level} / {battle.HeroLevel(featureHero)}", label);
+            long cost = battle.SkillCost(featureHero, slot);
+            string status = level == int.MaxValue ? "Maximum level" : level >= battle.HeroLevel(featureHero)
                 ? $"Requires hero Lv.{level + 1}" : $"Gold {battle.Gold} / {cost}";
-            GUI.Label(new Rect(12, 210, 215, 32), status, small);
+            GUI.Label(new Rect(12, 206, 310, 46), idleSaveError ?? status, small);
             GUI.enabled = battle.CanTrain(featureHero, slot);
-            if (GUI.Button(new Rect(12, 254, 214, 48), $"Upgrade  /  {cost} G", button)) battle.Train(featureHero, slot);
+            if (GUI.Button(new Rect(12, 254, 214, 48), $"Upgrade  /  {cost} G", button)) TryTrainSkill(featureHero, slot);
             GUI.enabled = true;
         }
         private bool showSynergyEffects;
@@ -463,29 +465,35 @@ namespace AFKTrial
                 return;
             }
             if (GUI.Button(new Rect(width - 168, 56, 148, 38), "Synergy effects")) showSynergyEffects = true;
-            GUI.Label(new Rect(20, 59, width - 200, 32), "Choose a slot, then a hero.", small);
-            float slotWidth = (width - 52) / 3f;
+            int deployed = System.Array.FindAll(draft, hero => hero >= 0).Length;
+            ArcadeText(new Rect(20, 54, width - 340, 20), $"Deployed {deployed}/3   ·   Select a slot, then a hero", 13, HallLight, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(20, 75, width - 190, 21), "Center front row deals and takes 20% more damage.", 14, HallAmber, TextAnchor.MiddleLeft);
+            GUI.enabled = deployed > 1 && draft[selectedSlot] >= 0;
+            if (GUI.Button(new Rect(width - 310, 56, 132, 38), "Remove hero")) draft[selectedSlot] = -1;
+            GUI.enabled = true;
+            float boardWidth = Mathf.Min(width - 40, 660);
+            var board = new Rect((width - boardWidth) / 2, 100, boardWidth, 108);
             bool changed = false;
             for (int i = 0; i < draft.Length; i++)
             {
-                var rect = new Rect(20 + i * (slotWidth + 6), 101, slotWidth, 51);
+                var rect = FormationSlotRect(board, i);
                 if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) selectedSlot = i;
                 bool current = i == selectedSlot;
                 ManuscriptFade(rect, current ? new Color32(69, 63, 56, 239) : new Color32(43, 44, 58, 215), HallInk);
                 CourtRule(new Rect(rect.x + 1, rect.yMax - 1, rect.width - 2, 1), current ? HallAmber : HallLine);
                 float textX = rect.x + (width > 540 ? 73 : 31);
-                if (width > 540)
+                if (width > 540 && draft[i] >= 0)
                     DrawKnightPortrait(new Rect(rect.x + 1, rect.y + 2, 61, rect.height - 4), draft[i], Color.white);
                 GUI.DrawTexture(new Rect(rect.x + 3, rect.y + (width > 540 ? 27 : 13), 23, 23), deploymentBadges[i], ScaleMode.ScaleToFit);
                 ArcadeText(new Rect(textX, rect.y + 5, rect.xMax - textX - 3, 16),
-                    battle.Data.Heroes[draft[i]].Role.ToString().ToUpperInvariant(), 11, HallAmber, TextAnchor.MiddleLeft);
+                    i == 1 ? "FRONT" : i == 2 ? "UPPER REAR" : "LOWER REAR", 11, HallAmber, TextAnchor.MiddleLeft);
                 ArcadeText(new Rect(textX, rect.y + 20, rect.xMax - textX - 3, 26),
-                    battle.Heroes[draft[i]], width > 540 ? 17 : 14, HallLight, TextAnchor.MiddleLeft);
+                    draft[i] >= 0 ? battle.Heroes[draft[i]] : "Empty", width > 540 ? 17 : 14, HallLight, TextAnchor.MiddleLeft);
                 changed |= draft[i] != battle.HeroAt(i);
             }
             bool wide = width > 540;
             float footerHeight = wide ? 68 : 100;
-            DrawHeroGrid(width, 160, height - 160 - footerHeight, true);
+            DrawHeroGrid(width, 216, height - 216 - footerHeight, true);
             ManuscriptFade(new Rect(0, height - footerHeight, width, footerHeight),
                 new Color32(31, 35, 50, 240), HallInk);
             DrawSynergyLine(20, height - footerHeight + 2, "Active", battle.ActiveSynergy);
@@ -542,6 +550,12 @@ namespace AFKTrial
                         pull.IsNew ? "New!" : "+1   Lv." + pull.Level, summonLevel);
                 }
             }
+            if (!string.IsNullOrEmpty(idleSaveError))
+            {
+                var notice = new Rect(8, art.yMax - 45, width - 16, 42);
+                Fill(notice, HallInk);
+                GUI.Label(notice, idleSaveError, HudCentered);
+            }
             float ticketY = art.yMax + (portraitLayout ? 5 : 17);
             Picture("SummonUI/SummonTicket", 18, ticketY, 30, 30);
             GUI.Label(new Rect(54, ticketY - 2, 190, 34), "Tickets   " + battle.Tickets, label);
@@ -555,10 +569,7 @@ namespace AFKTrial
         {
             GUI.enabled = battle.Tickets >= count;
             if (GUI.Button(rect, "Summon x" + count, count == 10 ? knightSelectedButton : button))
-            {
-                lastPulls = battle.Summon(count);
-                animationStart = Time.unscaledTime;
-            }
+                TrySummon(count);
             GUI.enabled = true;
         }
         private void InventoryBox(Rect rect, Color inside, Color border)
@@ -666,20 +677,29 @@ namespace AFKTrial
             DrawGearProfile(detail, picking);
         }
 
+        private static Color GearInk(TrialData.GearRarity rarity) =>
+            rarity == TrialData.GearRarity.Uncommon ? new Color32(161, 232, 168, 255) :
+            rarity == TrialData.GearRarity.Rare ? new Color32(158, 207, 255, 255) : Parchment;
+
+        private static Color GearBackground(TrialData.GearRarity rarity) =>
+            rarity == TrialData.GearRarity.Uncommon ? new Color32(36, 88, 58, 255) :
+            rarity == TrialData.GearRarity.Rare ? new Color32(37, 75, 126, 255) : new Color32(48, 52, 60, 255);
+
         private bool DrawGearCard(Rect card, TrialBattle.Item item, bool selected)
         {
             bool hovered = card.Contains(Event.current.mousePosition);
             Color edge = selected ? HallAmber : hovered ? FrameGold : new Color32(73, 75, 78, 255);
             Fill(card, edge);
             var inside = new Rect(card.x + 1, card.y + 1, card.width - 2, card.height - 2);
-            ManuscriptFade(inside, selected ? new Color32(60, 57, 55, 255) : new Color32(36, 44, 54, 255), HallInk);
+            Color background = GearBackground(item.Gear.Rarity);
+            ManuscriptFade(inside, background, Color.Lerp(background, HallInk, .55f));
             float size = Mathf.Min(card.width - 25, card.height - 30);
             Picture(GearIcon(item), card.center.x - size / 2, card.y + 4, size, size);
             if (item.Enhancement > 0)
                 ArcadeText(new Rect(card.x + 7, card.y + 2, 60, 22), "+" + item.Enhancement, 12, HallAmber, TextAnchor.MiddleLeft);
             if (item.Owner >= 0)
                 DrawCourtEmblem(new Rect(card.xMax - 26, card.y + 5, 19, 19), 0, HallAmber);
-            CourtHeading(new Rect(card.x + 3, card.yMax - 29, card.width - 6, 26), item.Gear.Name, 16, TextAnchor.MiddleCenter);
+            ArcadeText(new Rect(card.x + 3, card.yMax - 29, card.width - 6, 26), item.Gear.Name, 16, GearInk(item.Gear.Rarity), TextAnchor.MiddleCenter);
             if (selected) CourtGem(new Vector2(card.center.x, card.y + 1), 5, HallAmber);
             return GUI.Button(card, new GUIContent("", item.Gear.Name), GUIStyle.none);
         }
@@ -699,18 +719,19 @@ namespace AFKTrial
             float crop = Mathf.Min(0.53f, art.width / art.height * backdrop.height / backdrop.width);
             GUI.DrawTextureWithTexCoords(art, backdrop, new Rect(0, 0.14f, crop, Mathf.Min(0.86f,
                 crop * backdrop.width / backdrop.height * art.height / art.width)));
-            ManuscriptFade(art, new Color32(12, 19, 32, 60), new Color32(14, 23, 35, 212));
+            Color tint = GearBackground(gear.Rarity);
+            ManuscriptFade(art, new Color(tint.r, tint.g, tint.b, .32f), new Color(tint.r, tint.g, tint.b, .84f));
             float iconSize = Mathf.Min(142, art.height - 19);
             GUI.DrawTexture(new Rect(art.center.x - iconSize * 0.55f, art.center.y - iconSize * 0.55f,
                 iconSize * 1.1f, iconSize * 1.1f), coatMedallion, ScaleMode.ScaleToFit);
             Picture(GearIcon(item), art.center.x - iconSize * 0.42f, art.center.y - iconSize * 0.42f, iconSize * 0.84f, iconSize * 0.84f);
-            ArcadeText(new Rect(15, 6, area.width - 30, 24), gear.Slot.ToString().ToUpperInvariant(),
-                12, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(15, 6, area.width - 30, 24), (gear.Rarity + "   ·   " + gear.Slot).ToUpperInvariant(),
+                12, GearInk(gear.Rarity), TextAnchor.MiddleLeft);
             ManuscriptFade(new Rect(0, artHeight, area.width, 164), new Color32(35, 40, 52, 255), HallInk);
             CourtRule(new Rect(0, artHeight, area.width, 1), FrameGold);
             float x = 16, y = artHeight + 8;
-            CourtHeading(new Rect(x, y, area.width - 32, 35), gear.Name + "  +" + item.Enhancement,
-                26, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(x, y, area.width - 32, 35), gear.Name + "  +" + item.Enhancement,
+                26, GearInk(gear.Rarity), TextAnchor.MiddleLeft);
             string owner = item.Owner < 0 ? "In bag" : "Equipped by " + battle.Heroes[item.Owner];
             ArcadeText(new Rect(x, y + 35, area.width - 32, 21), owner, 14, BodyInk, TextAnchor.MiddleLeft);
             string increase = capped ? stat + "  +" + item.Bonus : stat + "  +" + item.Bonus + "  →  +" + item.BonusAt(item.Enhancement + 1);

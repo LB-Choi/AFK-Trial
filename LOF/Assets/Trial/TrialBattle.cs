@@ -11,27 +11,31 @@ namespace AFKTrial
         public readonly IReadOnlyList<string> Heroes;
         private readonly int[] formation;
         public bool BossStage => ActiveStage > 0 && ActiveStage % Data.BossEvery == 0;
+        public Unit ActiveBoss => BossStage ? Units[formation.Length + Data.BossSlot] : null;
         public TrialData.Role ActiveSynergy { get; private set; }
 
         public TrialData.Role FormationSynergy(int[] party)
         {
             for (int i = 0; i < party.Length; i++)
                 for (int j = i + 1; j < party.Length; j++)
-                    if (Data.Heroes[party[i]].Role == Data.Heroes[party[j]].Role)
+                    if (party[i] >= 0 && party[j] >= 0 && Data.Heroes[party[i]].Role == Data.Heroes[party[j]].Role)
                         return Data.Heroes[party[i]].Role;
             return TrialData.Role.None;
         }
 
         public int HeroAt(int slot) => formation[slot];
 
+        public int FirstDeployedHero => Array.Find(formation, hero => hero >= 0);
+
         public void ApplyFormation(int[] heroes)
         {
             if (heroes == null || heroes.Length != formation.Length)
-                throw new ArgumentException("Choose three heroes.");
+                throw new ArgumentException("Choose three deployment slots.");
             var seen = new HashSet<int>();
             foreach (int hero in heroes)
-                if (hero < 0 || hero >= Heroes.Count || !Owned(hero) || !seen.Add(hero))
-                    throw new ArgumentException("Choose three distinct roster members.");
+                if (hero != -1 && (hero < 0 || hero >= Heroes.Count || !Owned(hero) || !seen.Add(hero)))
+                    throw new ArgumentException("Choose distinct roster members.");
+            if (seen.Count == 0) throw new ArgumentException("Deploy at least one hero.");
             Array.Copy(heroes, formation, heroes.Length);
         }
 
@@ -45,14 +49,21 @@ namespace AFKTrial
             public Vector2 Position;
             public Unit Target;
             internal readonly SkillState Skills = new SkillState();
+            public float AttackBuffUntil => Skills.AttackUp.Until;
+            public float StunnedUntil => Skills.StunnedUntil;
             public string LastSkill;
             public float LastSkillTime = float.NegativeInfinity;
             public int Level, Attacks, Armor;
+            internal int Lane;
+            internal Vector2? Waypoint;
             public int HeroIndex = -1;
             public bool Walking, WindingUp;
             public float SwingStart = float.NegativeInfinity;
             public float LastHitTime = float.NegativeInfinity;
             public float LastDamage, LastHitHeight;
+            internal bool LastDamageWasBleed;
+            internal float RankMultiplier => Ally && Lane == 1 ? 1.2f : 1f;
+            internal float DamageTakenMultiplier => RankMultiplier * (1f - Skills.DamageReduction);
             public bool Alive => Hp > 0;
         }
 
@@ -256,6 +267,7 @@ namespace AFKTrial
         private int duplicateStreak;
         public int Tickets { get; private set; }
         public int TicketReward { get; private set; }
+        public Pull? RecruitReward { get; private set; }
         public int HeroLevel(int hero) => (uint)hero < heroLevels.Length ? heroLevels[hero] : 0;
         public bool Owned(int hero) => HeroLevel(hero) > 0;
 
@@ -294,14 +306,22 @@ namespace AFKTrial
         }
 
         public int SkillLevel(int hero, int slot) => skillLevels[hero, slot];
-        public int SkillCost(int hero, int slot) => Data.Skills[hero, slot].BaseGoldCost * SkillLevel(hero, slot);
-        public bool CanTrain(int hero, int slot) => Owned(hero) && SkillLevel(hero, slot) < Mathf.Min(5, HeroLevel(hero))
+        public long SkillCost(int hero, int slot) => (long)Data.Skills[hero, slot].BaseGoldCost * SkillLevel(hero, slot);
+        public bool CanTrain(int hero, int slot) => Owned(hero) && (uint)slot < 3 && SkillLevel(hero, slot) < HeroLevel(hero)
             && Gold >= SkillCost(hero, slot);
 
-        public bool Train(int hero, int slot)
+        public bool Train(int hero, int slot, Func<Progress, bool> save = null)
         {
             if (!CanTrain(hero, slot)) return false;
-            Gold -= SkillCost(hero, slot);
+            int nextGold = Gold - (int)SkillCost(hero, slot);
+            if (save != null)
+            {
+                var progress = CaptureProgress();
+                progress.gold = nextGold;
+                Array.Find(progress.heroes, entry => entry.id == Data.Heroes[hero].Id).skills[slot]++;
+                if (!save(progress)) return false;
+            }
+            Gold = nextGold;
             skillLevels[hero, slot]++;
             return true;
         }
@@ -318,29 +338,38 @@ namespace AFKTrial
             public bool IsNew;
         }
 
-        public Pull[] Summon(int count)
+        public Pull[] Summon(int count, Func<Progress, bool> save = null)
         {
             if ((count != 1 && count != 10) || Tickets < count) return null;
             var pulls = new Pull[count];
-            Tickets -= count;
+            var levels = (int[])heroLevels.Clone();
+            int streak = duplicateStreak;
             for (int i = 0; i < count; i++)
             {
                 int hero = UnityEngine.Random.Range(0, heroLevels.Length);
-                if (duplicateStreak >= 9)
+                if (streak >= 9)
                 {
                     var missing = new List<int>();
-                    for (int h = 0; h < heroLevels.Length; h++) if (!Owned(h)) missing.Add(h);
+                    for (int h = 0; h < levels.Length; h++) if (levels[h] == 0) missing.Add(h);
                     if (missing.Count > 0) hero = missing[UnityEngine.Random.Range(0, missing.Count)];
                 }
-                bool isNew = !Owned(hero);
-                if (isNew) { UnlockHero(hero); duplicateStreak = 0; }
-                else
-                {
-                    if (heroLevels[hero] < int.MaxValue) heroLevels[hero]++;
-                    duplicateStreak = Array.IndexOf(heroLevels, 0) >= 0 ? duplicateStreak + 1 : 0;
-                }
-                pulls[i] = new Pull { Hero = hero, IsNew = isNew, Level = HeroLevel(hero) };
+                bool isNew = levels[hero] == 0;
+                if (levels[hero] < int.MaxValue) levels[hero]++;
+                streak = !isNew && Array.IndexOf(levels, 0) >= 0 ? streak + 1 : 0;
+                pulls[i] = new Pull { Hero = hero, IsNew = isNew, Level = levels[hero] };
             }
+            if (save != null)
+            {
+                var progress = CaptureProgress(levels);
+                progress.tickets -= count;
+                progress.duplicateStreak = streak;
+                if (!save(progress)) return null;
+            }
+            foreach (var pull in pulls)
+                if (pull.IsNew) UnlockHero(pull.Hero);
+            Array.Copy(levels, heroLevels, levels.Length);
+            Tickets -= count;
+            duplicateStreak = streak;
             return pulls;
         }
 
@@ -380,6 +409,7 @@ namespace AFKTrial
             Finished = false;
             Won = false;
             GearReward = null;
+            RecruitReward = null;
             GearConverted = false;
             GoldReward = ExperienceReward = TicketReward = 0;
             Result = "Battle started";
@@ -388,6 +418,11 @@ namespace AFKTrial
             for (int i = 0; i < formation.Length; i++)
             {
                 int index = formation[i];
+                if (index < 0)
+                {
+                    Units.Add(new Unit { Ally = true, Lane = i });
+                    continue;
+                }
                 var hero = Data.Heroes[index];
                 var stats = HeroStats(index);
                 Add(hero, hero.Name, true, i, stats.hp, stats.attack);
@@ -409,17 +444,20 @@ namespace AFKTrial
 
         private void Add(TrialData.Fighter stats, string name, bool ally, int lane, float hp, float attack)
         {
-            var position = new Vector2(ally ? -Data.SpawnDistance : Data.SpawnDistance, (lane - 1) * Data.LaneSpacing);
-            Units.Add(new Unit { Stats = stats, Name = name, Ally = ally, Position = position,
+            float depth = Data.SpawnDistance * (lane == 1 ? .575f : 1f);
+            var position = new Vector2(ally ? -depth : depth,
+                (lane - 1) * Mathf.Max(Data.LaneSpacing, BodySpacing));
+            Units.Add(new Unit { Stats = stats, Name = name, Ally = ally, Lane = lane, Position = position,
                 Hp = hp, MaxHp = hp, Attack = attack, SwingSpeed = Mathf.Max(1, stats.ImpactSeconds / stats.Interval) });
         }
 
         private struct PendingHit
         {
-            public float Total, Piercing, Strongest, Height;
+            public float Total, Piercing, Strongest, Height, HealthLoss;
 
             public void Add(Unit attacker, float amount, bool pierce)
             {
+                amount *= attacker.RankMultiplier;
                 if (pierce) Piercing += amount; else Total += amount;
                 if (amount <= Strongest) return;
                 Strongest = amount;
@@ -433,53 +471,43 @@ namespace AFKTrial
             Elapsed += dt;
             // Accumulate hits first so a simultaneous wipe is consistently a defeat.
             var hits = new PendingHit[Units.Count];
+            foreach (var unit in Units)
+                if (unit.Alive)
+                {
+                    TickBleed(unit);
+                    SelectTarget(unit);
+                }
             foreach (Unit unit in Units)
             {
                 unit.Walking = false;
                 if (!unit.Alive) continue;
                 UpdateSkillEffects(unit, dt);
                 if (unit.Skills.StunnedUntil > Elapsed) continue;
-                if (unit.Skills.Taunter != null && unit.Skills.Taunter.Alive) unit.Target = unit.Skills.Taunter;
-                if (unit.Target == null || !unit.Target.Alive)
-                {
-                    if (unit.WindingUp) unit.SwingStart = float.NegativeInfinity;
-                    unit.WindingUp = false;
-                    unit.Target = null;
-                    float closest = float.MaxValue;
-                    foreach (Unit other in Units)
-                    {
-                        float distance = (other.Position - unit.Position).sqrMagnitude;
-                        if (other.Alive && other.Ally != unit.Ally && distance < closest)
-                        { closest = distance; unit.Target = other; }
-                    }
-                }
                 float speed = SpeedMultiplier(unit);
                 unit.Cooldown = Mathf.Max(0, unit.Cooldown - dt * speed);
                 if (unit.Target == null) continue;
-                var destination = unit.Target.Position;
-                bool approaching;
-                if (unit.Stats.ContactDistance > 0)
-                {
-                    // A fixed-reach weapon needs the target in its swing plane and at the drawn distance.
-                    destination.x += unit.Ally ? -unit.Stats.ContactDistance : unit.Stats.ContactDistance;
-                    approaching = Vector2.Distance(unit.Position, destination) > .01f;
-                }
-                else
-                {
-                    destination.y = unit.Position.y;
-                    approaching = Mathf.Abs(unit.Position.x - destination.x) > unit.Stats.Range;
-                }
-                if (approaching)
+                var destination = AttackPosition(unit, out bool flanking);
+                bool fixedReach = unit.Stats.ContactDistance > 0;
+                bool inReach = fixedReach ? (unit.Position - destination).sqrMagnitude <= .01f * .01f :
+                    (unit.Position - unit.Target.Position).sqrMagnitude <= unit.Stats.Range * unit.Stats.Range;
+                bool settling = flanking && !unit.WindingUp && unit.Cooldown > 0 &&
+                    (unit.Position - destination).sqrMagnitude > .10f * .10f && inReach &&
+                    ClearPath(unit, unit.Position, destination);
+                if (!inReach || settling)
                 {
                     // A landed strike must finish its recovery before another approach.
                     if (!unit.WindingUp && (Elapsed - unit.SwingStart) * unit.SwingSpeed < unit.Stats.AttackDuration)
                         continue;
-                    unit.Walking = true;
-                    unit.WindingUp = false;
-                    unit.SwingStart = float.NegativeInfinity;
-                    unit.Position = Vector2.MoveTowards(unit.Position, destination, dt * unit.Stats.Speed);
+                    var next = StepAroundUnits(unit, destination, dt * unit.Stats.Speed);
+                    unit.Walking = (next - unit.Position).sqrMagnitude > 0.000001f;
+                    unit.Position = next;
+                    if (unit.Walking || !inReach)
+                    {
+                        unit.WindingUp = false;
+                        unit.SwingStart = float.NegativeInfinity;
+                    }
                 }
-                else if (unit.Cooldown <= 0)
+                if (inReach && !unit.Walking && speed > 0f && unit.Cooldown <= 0)
                 {
                     float impact = unit.Stats.ImpactSeconds;
                     if (impact > 0)
@@ -493,9 +521,8 @@ namespace AFKTrial
                         if ((Elapsed - unit.SwingStart) * unit.SwingSpeed + 0.00001f < impact) continue;
                         unit.WindingUp = false;
                     }
-                    if (!unit.Skills.Blinded) Strike(unit, unit.Target, AttackPower(unit), hits);
-                    unit.Skills.Blinded = false;
-                    if (unit.Skills.Taunter != null) { unit.Skills.Taunter = null; unit.Target = null; }
+                    if (unit.Skills.BlindUntil <= Elapsed) BasicStrike(unit, hits);
+                    if (unit.Skills.Taunter != null && unit.Skills.TauntUntil == 0f) { unit.Skills.Taunter = null; unit.Target = null; }
                     unit.Cooldown = Mathf.Max(0, unit.Stats.Interval - impact / unit.SwingSpeed * speed);
                     unit.Attacks++;
                 }
@@ -504,13 +531,14 @@ namespace AFKTrial
             bool allies = false, enemies = false;
             for (int i = 0; i < Units.Count; i++)
             {
-                if (hits[i].Total > 0 || hits[i].Piercing > 0)
+                if (hits[i].Total > 0 || hits[i].Piercing > 0 || hits[i].HealthLoss > 0)
                 {
                     Unit unit = Units[i];
-                    float armor = unit.Armor * (1 + unit.Skills.DefenseUp.Value(Elapsed)) * (1 - unit.Skills.DefenseDown.Value(Elapsed));
+                    float armor = EffectiveArmor(unit);
                     float damage = hits[i].Total * (100f / (100f + armor)) + hits[i].Piercing;
                     if (unit.Ally && ActiveSynergy == TrialData.Role.Defense) damage *= 0.90f;
-                    unit.LastDamage = Mathf.Min(unit.Hp, damage);
+                    unit.LastDamage = Mathf.Min(unit.Hp, (damage + hits[i].HealthLoss) * unit.DamageTakenMultiplier);
+                    unit.LastDamageWasBleed = false;
                     unit.LastHitTime = Elapsed;
                     unit.LastHitHeight = hits[i].Height;
                     unit.Hp -= unit.LastDamage;
@@ -553,6 +581,13 @@ namespace AFKTrial
                 bool first = !ActiveFarming && ActiveStage > Highest;
                 TicketReward = first ? (BossStage ? Data.FirstBossTickets : Data.FirstWinTickets) : 0;
                 Tickets += TicketReward;
+                if (first && Data.FirstClearRecruits.TryGetValue(ActiveStage, out int hero))
+                {
+                    bool isNew = !Owned(hero);
+                    if (isNew) UnlockHero(hero);
+                    else if (heroLevels[hero] < int.MaxValue) heroLevels[hero]++;
+                    RecruitReward = new Pull { Hero = hero, IsNew = isNew, Level = heroLevels[hero] };
+                }
                 int multiplier = first ? Data.FirstWinMultiplier : 1;
                 GoldReward = reward * multiplier;
                 ExperienceReward = (ActiveStage == 0 ? Data.PracticeXp : Data.BaseXp + ActiveStage * Data.XpPerStage) * multiplier;

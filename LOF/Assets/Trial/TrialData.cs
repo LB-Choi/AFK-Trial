@@ -19,6 +19,7 @@ namespace AFKTrial
         public readonly Skill[,] Skills;
         public readonly bool StartWithAllHeroes;
         public readonly int StartingTickets, FirstWinTickets, FirstBossTickets;
+        public readonly Dictionary<int, int> FirstClearRecruits = new Dictionary<int, int>();
         public readonly int IdleCapHours, IdleEfficiencyPercent, IdleReferenceClearSeconds;
 
         public enum DungeonKind { GoldVault, ExperienceArchive }
@@ -50,10 +51,12 @@ namespace AFKTrial
         }
 
         public enum GearSlot { Weapon, Armor, Necklace }
+        public enum GearRarity { Common, Uncommon, Rare }
         public sealed class Gear
         {
             public string Name;
             public GearSlot Slot;
+            public GearRarity Rarity;
             public int Bonus, SellGold, Step;
         }
         public readonly List<Gear> StarterGear = new List<Gear>();
@@ -65,6 +68,7 @@ namespace AFKTrial
             public string Id, Name, Portrait, Animation;
             public Role Role;
             public int BaseArmor, ArmorPerLevel;
+            public int SkillEvery;
             public float Hp, Attack, HpPerLevel, AttackPerLevel, Speed, Range, Interval, ImpactSeconds;
             public float ContactDistance, AttackDuration, HitHeight;
         }
@@ -105,7 +109,9 @@ namespace AFKTrial
             {
                 if (!Enum.TryParse(row.Text("slot"), out GearSlot slot) || !Enum.IsDefined(typeof(GearSlot), slot))
                     throw row.Error("invalid equipment slot");
-                StarterGear.Add(new Gear { Name = row.Text("name"), Slot = slot,
+                if (!Enum.TryParse(row.Optional("rarity", "Common"), true, out GearRarity rarity) || !Enum.IsDefined(typeof(GearRarity), rarity))
+                    throw row.Error("invalid equipment rarity");
+                StarterGear.Add(new Gear { Name = row.Text("name"), Slot = slot, Rarity = rarity,
                     Bonus = row.Integer("bonus", 1), Step = row.Integer("bonusPerEnhancement", 1, 1), SellGold = row.Integer("sellGold", 1) });
             }
             var impacts = new Dictionary<string, float>();
@@ -129,6 +135,12 @@ namespace AFKTrial
                 hero.BaseArmor = row.Integer("baseArmor", fallback: 0);
                 hero.ArmorPerLevel = row.Integer("armorPerLevel", fallback: 0);
                 int slot = row.Integer("startingSlot");
+                int recruitStage = row.Integer("recruitStage", fallback: 0);
+                if (recruitStage > 0)
+                {
+                    if (FirstClearRecruits.ContainsKey(recruitStage)) throw row.Error("duplicate recruitStage");
+                    FirstClearRecruits.Add(recruitStage, Heroes.Count);
+                }
                 if (slot > StartingFormation.Length) throw row.Error("startingSlot must be 0 to 3");
                 if (slot > 0)
                 {
@@ -163,6 +175,7 @@ namespace AFKTrial
             foreach (var row in CsvRow.Read(directory, "Enemies"))
             {
                 var enemy = ReadFighter(row, row.Optional("animation", ""), impacts);
+                enemy.SkillEvery = row.Integer("skillEvery", fallback: 0);
                 if (row.Optional("hitHeight", "") != "") enemy.HitHeight = row.Number("hitHeight", true);
                 if (row.Optional("contactDistance", "") != "")
                 {

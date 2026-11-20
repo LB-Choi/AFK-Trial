@@ -48,26 +48,28 @@ namespace AFKTrial
         [Serializable]
         public sealed class GearProgress
         {
-            public string name, ownerId;
+            public string name, ownerId, rarity;
             public TrialData.GearSlot slot;
             public int bonus, sellGold, enhancement, step;
         }
 
         private GearProgress CaptureItem(Item item) => new GearProgress {
             enhancement = item.Enhancement, step = item.Gear.Step,
-            name = item.Gear.Name, slot = item.Gear.Slot, bonus = item.Gear.Bonus, sellGold = item.Gear.SellGold,
+            rarity = item.Gear.Rarity.ToString(), name = item.Gear.Name, slot = item.Gear.Slot, bonus = item.Gear.Bonus, sellGold = item.Gear.SellGold,
             ownerId = item.Owner < 0 ? "" : Data.Heroes[item.Owner].Id
         };
 
-        public Progress CaptureProgress()
+        public Progress CaptureProgress() => CaptureProgress(heroLevels);
+
+        private Progress CaptureProgress(int[] levels)
         {
             var heroes = new List<HeroProgress>();
             for (int i = 0; i < heroLevels.Length; i++)
             {
-                if (!Owned(i)) continue;
+                if (levels[i] == 0) continue;
                 heroes.Add(new HeroProgress {
-                    id = Data.Heroes[i].Id, level = HeroLevel(i),
-                    skills = new[] { skillLevels[i, 0], skillLevels[i, 1], skillLevels[i, 2] }
+                    id = Data.Heroes[i].Id, level = levels[i],
+                    skills = Owned(i) ? new[] { skillLevels[i, 0], skillLevels[i, 1], skillLevels[i, 2] } : new[] { 1, 1, 1 }
                 });
             }
             var items = new GearProgress[inventory.Count];
@@ -78,7 +80,7 @@ namespace AFKTrial
                 experience = Experience, tickets = Tickets, duplicateStreak = duplicateStreak,
                 goldVaultClears = clearedDungeonTiers[(int)TrialData.DungeonKind.GoldVault],
                 experienceArchiveClears = clearedDungeonTiers[(int)TrialData.DungeonKind.ExperienceArchive],
-                formation = Array.ConvertAll(formation, index => Data.Heroes[index].Id),
+                formation = Array.ConvertAll(formation, index => index < 0 ? "" : Data.Heroes[index].Id),
                 heroes = heroes.ToArray(), inventory = items
             };
         }
@@ -99,14 +101,20 @@ namespace AFKTrial
             foreach (var hero in saved.heroes)
             {
                 if (hero == null || hero.level < 1 || hero.skills == null || hero.skills.Length != 3 ||
-                    Array.Exists(hero.skills, value => value < 1 || value > Math.Min(5, hero.level))) return false;
+                    Array.Exists(hero.skills, value => value < 1 || value > hero.level)) return false;
                 int index = Data.Heroes.FindIndex(fighter => fighter.Id == hero.id);
                 if (index < 0 || roster[index] != null) return false;
                 roster[index] = hero;
             }
             var party = Array.ConvertAll(saved.formation, id => Data.Heroes.FindIndex(hero => hero.Id == id));
-            if (Array.Exists(party, index => index < 0 || roster[index] == null) ||
-                new HashSet<int>(party).Count != party.Length) return false;
+            var deployed = new HashSet<int>();
+            for (int i = 0; i < party.Length; i++)
+            {
+                if (saved.formation[i] == "") continue;
+                int hero = party[i];
+                if (hero < 0 || roster[hero] == null || !deployed.Add(hero)) return false;
+            }
+            if (deployed.Count == 0) return false;
 
             var items = new List<Item>();
             var equippedSlots = new HashSet<(int, TrialData.GearSlot)>();
@@ -121,7 +129,11 @@ namespace AFKTrial
                     if (owner < 0 || roster[owner] == null || !equippedSlots.Add((owner, gear.slot))) return false;
                 }
                 var template = Data.StarterGear.Find(g => g.Name == gear.name && g.Slot == gear.slot);
+                var rarity = template?.Rarity ?? TrialData.GearRarity.Common;
+                if (!string.IsNullOrEmpty(gear.rarity) && (!Enum.TryParse(gear.rarity, out rarity) ||
+                    !Enum.IsDefined(typeof(TrialData.GearRarity), rarity))) return false;
                 var definition = new TrialData.Gear {
+                    Rarity = rarity,
                     Step = gear.step > 0 ? gear.step : (template?.Step ?? 1),
                     Name = gear.name, Slot = gear.slot, Bonus = gear.bonus, SellGold = gear.sellGold
                 };

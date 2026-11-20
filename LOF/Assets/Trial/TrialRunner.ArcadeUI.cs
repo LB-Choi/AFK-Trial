@@ -50,7 +50,7 @@ namespace AFKTrial
             float bottom = height - HallDockHeight(!wide) - 10;
             var portraitArea = wide ? new Rect(20, 73, 232, bottom - 73)
                 : new Rect(20, 74, width - 40, 168);
-            if (!battle.Owned(galleryHero)) galleryHero = battle.HeroAt(0);
+            if (!battle.Owned(galleryHero)) galleryHero = battle.FirstDeployedHero;
             int hero = galleryHero;
             GUI.BeginGroup(portraitArea);
             var area = new Rect(0, 0, portraitArea.width, portraitArea.height);
@@ -120,6 +120,12 @@ namespace AFKTrial
 
         private void DrawRosterCard(Rect card, int hero, int deployedSlot, bool selected)
         {
+            if (hero < 0)
+            {
+                ArcadePanel(card, HallInk, selected ? HallAmber : HallLine);
+                ArcadeText(card, deployedSlot == 1 ? "Front · Empty" : "Rear · Empty", 16, HallLight, TextAnchor.MiddleCenter);
+                return;
+            }
             bool owned = battle.Owned(hero);
             var role = battle.Data.Heroes[hero].Role;
             Color accent = owned ? RoleAccent(role) : new Color32(104, 119, 139, 255);

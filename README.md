@@ -4,7 +4,7 @@
 
 ## 테스트 실행
 
-본 제작의 전투 방향은 좌우 대치다. `LOF/Assets/Scenes/SideBattle.unity`를 열고 Play하면 960×540 기준 왼쪽 아군과 오른쪽 적이 중앙으로 접근한다. 전장에서는 유닛 위치에 체력바가 표시되며, 하단의 출전 기사 초상화에서도 아군 체력을 확인할 수 있다. 기존 상하 전투 비교용 씬은 `SampleScene`이다.
+현재 기능 개발과 플레이 검증은 가로 전투 화면을 기준으로 한다. `LOF/Assets/Scenes/SideBattle.unity`를 열고 Play하면 960×540 기준 왼쪽 아군과 오른쪽 적이 중앙으로 접근한다. 전장에서는 유닛 위치에 체력바가 표시되며, 하단의 출전 기사 초상화에서도 아군 체력을 확인할 수 있다. 기존 세로 비교 씬은 `SampleScene`이다.
 
 1. `LOF/Assets/Scenes/SideBattle.unity`를 열고 코드 임포트가 끝날 때까지 기다린다.
 2. Unity Play 버튼을 누른다. 두 전투 씬에서 실행기가 자동 생성된다. 컴포넌트를 수동으로 붙일 필요가 없다.
@@ -13,7 +13,9 @@
 5. 전장 오른쪽 위 `•••`를 열고 `Test: force defeat`로 패배·파밍 전환을 확인한다. 파밍에서 다시 패배하면 하위 단계로 이동하며 최저 연습 단계에서 멈춘다.
 6. `Retry`로 원래의 다음 도전 목표에 복귀한다. 전장 하단에서 Heroes, Formation, Summon을 바로 열 수 있다. Hall의 하단 아이콘에서는 장비, 던전, 방치 보상에도 접근할 수 있다. Formation에서 슬롯과 영웅 카드를 차례로 선택하면 여러 슬롯을 한 번에 수정할 수 있다. Apply next battle을 눌러 적용한다. 일반 메뉴에서도 전투와 스테이지 전환은 계속된다. 편성·장비·영웅 레벨은 다음 전투가 시작될 때 적용되며, 현재 전투의 HP와 시너지는 유지된다.
 
-전투 화면의 보스 진행선과 남은 시간은 진행 중인 전투를 기준으로 표시한다. Hall에서 현재 출전 중인 기사 3명과 보유 재화를 확인하고 각 화면으로 이동할 수 있다. Idle 메뉴에서는 최고 클리어 단계의 시간당 방치 보상을 확인할 수 있다.
+전투 화면의 보스 진행선과 남은 시간은 진행 중인 전투를 기준으로 표시한다. 보스 스테이지에서는 전투가 끝날 때까지 보스 이름이 화면 상단 중앙에 고정된다. Hall에서 현재 출전 중인 기사 3명과 보유 재화를 확인하고 각 화면으로 이동할 수 있다. Idle 메뉴에서는 최고 클리어 단계의 시간당 방치 보상을 확인할 수 있다.
+
+아군은 다른 줄에 있는 적에게 대각선으로 접근하며, 기본 공격 사거리는 X축과 Y축을 함께 계산한다. 여러 기사가 같은 적을 노리면 정면과 양옆으로 나누어 접근하고, 길을 막는 캐릭터를 돌아간다. 가로·세로 화면 모두에서 체력 바와 스킬 이펙트는 표시된 캐릭터 위치를 따라간다.
 
 `Hall → Dungeons`에서 Gold Vault(골드) 또는 Experience Archive(경험치)를 선택한다. 첫 회차 5스테이지 보스를 클리어하면 두 던전의 Easy가 열린다. 각 던전에서 이전 난이도를 클리어하면 Normal과 Hard가 차례로 열린다. 난이도를 선택해 예상 보상과 제한 시간을 확인하고 `Enter dungeon`을 누르면 현재 편성으로 자동 전투를 시작한다.
 
@@ -23,13 +25,15 @@
 
 방치 보상은 종료 당시 최고 클리어 단계의 일반 승리 보상을 기준으로 계산한다. 첫 클리어 전에는 연습 단계 보상을 사용한다. 기본 설정은 30초당 일반 승리 1회, 효율 80%, 누적 최대 20시간이며 재화별 소수점은 버린다. 진행도는 Unity 사용자 저장 폴더의 `AFKTrial/progress.json`에 기록하며, 전투 도중 종료하면 재접속 시 저장된 스테이지에서 전투를 새로 시작한다.
 
-현재 포함: 캐릭터 10종과 3인 편성, 3대3 기본 공격, 최근접 대상 선택·사망까지 유지, 자동 이동, HP·공격 간격, 제한 시간, 동시 전멸 패배, 5단계마다 보스, 회차 표시, 일반/최초 재화 보상, 파밍, 성장·재도전.
+현재 포함: 캐릭터 10종과 1~3인 편성, 3대3 기본 공격, 최근접 대상 선택·사망까지 유지, 자동 이동, HP·공격 간격, 제한 시간, 동시 전멸 패배, 5단계마다 보스, 회차 표시, 일반/최초 재화 보상, 파밍, 성장·재도전.
+
+중앙 슬롯은 전열로, 전장 중앙에 더 가까운 위치에서 시작하며 주는 피해와 받는 피해가 모두 20% 증가한다. 양 팀 모두 1번은 중앙 전열, 2번은 위쪽 후열, 3번은 아래쪽 후열이다. 두 후열은 같은 X 좌표에서 시작한다. Formation에서 Remove hero로 빈자리를 만들 수 있으며 적어도 한 명을 유지한다.
 
 같은 역할 두 명을 편성하면 맹공(공격력 +10%), 수호(받는 피해 −10%), 강화(공격력·최대 HP +5%) 중 하나가 적용된다. 편성창은 현재 시너지와 변경 후 시너지를 함께 표시한다.
 
 영웅 정보창 왼쪽에서 무기·갑옷·목걸이를 각각 선택해 장착하거나 해제한다. 교체한 장비는 가방으로 돌아온다. 메인 전투 승리 시 일반전은 5%, 보스전은 10% 확률로 +0 장비를 얻는다. 유형별로 장착분을 포함해 10개까지 보유하며 초과 획득분은 판매가만큼 골드로 전환한다. 가방과 장착창의 Enhance 버튼은 선택한 장비 한 개를 확정 강화한다. 기본 비용은 다음 강화 단계 × 20골드이며, 강화 상한은 최고 도달 회차 +10이다. 무기는 단계당 공격력 1, 갑옷은 방어력 2, 목걸이는 최대 HP 5가 추가된다. 영웅 정보창에는 장착 효과가 즉시 표시되고 전투에는 다음 전투부터 적용된다. Gear에서 미장착 장비를 골드로 판매할 수 있다.
 
-영웅별 세 스킬은 메인·던전 전투에서 자동 발동한다. 첫 슬롯은 기본 공격 횟수, 나머지 두 슬롯은 경과 시간으로 충전한다. 영웅 정보창에서 발동 조건과 효과를 확인할 수 있다. 스킬 레벨은 전투 시작 시 적용되며 발동한 스킬 이름은 영웅 위에 표시된다.
+영웅별 세 스킬은 메인·던전 전투에서 자동 발동한다. 각 스킬은 골드로 개별 강화하며, 최대 레벨은 해당 영웅의 현재 레벨이다. 스킬 공식에서 n은 스킬 레벨이다. 여명의 서약은 15초마다 생존 아군의 현재 체력 합계의 0.1n배를 회복한 뒤 체력 비율을 맞춘다. 완전 방어는 14초마다 전투 종료까지 유지되는 최종 피해 감소 n%를 갱신한다. 같은 종류의 버프와 상태이상은 최근 효과와 지속시간으로 갱신한다. 첫 슬롯은 기본 공격 횟수, 나머지 두 슬롯은 경과 시간으로 충전한다. 영웅 정보창에서 발동 조건과 효과를 확인할 수 있다. 스킬 레벨은 전투 시작 시 적용되며 발동한 스킬 이름은 영웅 위에 표시된다.
 
 ### Hall에서 스테이지 반복하기
 
@@ -43,7 +47,7 @@
 | --- | --- |
 | Summoning.csv | 시작 소환권과 최초 클리어 보상. startWithAllHeroes는 테스트 시 1, 시작 편성 3명만 보유할 때 0 |
 | Skills.csv | heroId와 slot(1~3)별 이름·설명·강화 기본 골드 비용. 설명에 쉼표가 있으면 CSV 따옴표로 감싼다. |
-| Equipment.csv | 새 게임에서 지급하는 장비 한 개당 한 행. 종류, 이름, 기본 능력치, 판매 가격, 강화 단계당 증가량(bonusPerEnhancement) |
+| Equipment.csv | 새 게임에서 지급하는 장비 한 개당 한 행. 종류, 이름, 등급(Common, Uncommon, Rare), 기본 능력치, 판매 가격, 강화 단계당 증가량(bonusPerEnhancement) |
 | IdleRewards.csv | 방치 시간 상한(`capHours`), 온라인 기준 효율(`efficiencyPercent`), 일반 승리 한 번의 기준 시간(`referenceClearSeconds`) |
 | Dungeons.csv | 던전 종류(`kind`)와 난이도(`tier` 1~3)별 적 능력치 배율(`power`), 제한 시간(`seconds`), 승리 시 지급할 재화량(`reward`) |
 | Heroes.csv | 역할(role: Attack, Defense, Support), 캐릭터별 이름, 초상화, 애니메이션, 기본 HP·공격력, 레벨당 증가량, 기본 방어력(baseArmor)과 레벨당 방어력(armorPerLevel), 이동 속도, 사거리, 공격 주기(초), 초기 편성 |
@@ -58,12 +62,28 @@
 
 타격 효과는 [ParticleFX Studio의 Hit Flash](https://particlefx.studio/effects/hit-flash) 무료 PNG 출력에서 예시 캐릭터를 제외하고 첫 번째 타격을 추출했다. 피해를 받은 유닛의 위치에서 한 번 재생한다.
 
+공격·방어 버프와 약화의 시전 이펙트는 해당 효과를 받은 유닛을 따라간다. 회복은 부상당한 아군 사이를 잇고, 도발은 시전자에게 표시한다. Twin Cut의 두 검격은 맞은 적에게 한 번 재생된다. Glacial Edge의 서리는 6초 동안 얼음 기사의 칼날을 따라가고, Hammer Bell의 별은 기절이 풀릴 때까지 대상 머리 위를 돈다. 이미지와 재생 설정은 `LOF/Assets/StreamingAssets/SkillEffects`에 있으며, `Sheets.csv`에서 프레임 수, 재생 속도, 표시 크기와 기준점을 조정할 수 있다.
+
+| ParticleFX Studio 원본 | 적용 스킬 |
+| --- | --- |
+| [Attack Up Buff](https://particlefx.studio/effects/attack-up-buff) | Glacial Edge, Blade Focus, Sword Oath, Rallying Flag |
+| [Defense Up Buff](https://particlefx.studio/effects/defense-up-buff) | Stone Mane, Stonewall, Steel Chorus, Royal Escort |
+| [Chain Heal](https://particlefx.studio/effects/chain-heal) | Field Repair, Sunlit Balm |
+| [Defense Down Debuff](https://particlefx.studio/effects/defense-down-debuff) | Armor Wither |
+| [Attack Down Debuff](https://particlefx.studio/effects/attack-down-debuff) | Banner Bash, Lion's Rebuke |
+| [Taunt Effect](https://particlefx.studio/effects/taunt-effect) | Royal Challenge, Shield Call |
+| [Katana Combo](https://particlefx.studio/effects/katana-combo) | Twin Cut |
+| [Frost Sword Enchant](https://particlefx.studio/effects/frost-sword-enchant) | Glacial Edge |
+| [Stun Stars](https://particlefx.studio/effects/stun-stars) | Hammer Bell |
+
+도적 분대장은 매 5번째 기본 공격에 현재 라운드 배율의 피해와 0.3초 기절을 준다. 도적 대장은 매 4번째 기본 공격에 현재 라운드 수만큼의 초 동안 출혈을 건다. 출혈을 다시 적용하면 지속시간이 갱신된다. 1초마다 그 시점의 현재 HP × 0.1%에 받는 피해 보정을 적용한다. 화면에는 작은 상처 효과 하나만 표시한다. 보스 체력바는 상단 이름 바로 아래에 고정한다. [Bleeding 원본](https://particlefx.studio/effects/bleeding)
+
 ### 확인 결과와 재실행
 
 - Unity 6000.5.0f1에서 컴파일 후 모델 검사가 통과했다. 첫 승리·보상 중복 방지·성장 반영·파밍·후퇴·최저 단계·재도전·동시 전멸·재화 부족·회차 표기를 검사한다.
 - `AFK Trial > Run Model Checks` 메뉴로 다시 실행할 수 있다. 상세 결과는 로컬 `LOF/Logs/TrialChecks.txt`에 기록한다. Logs는 Git 제외 대상이다.
 - Editor 코드 재로드 때는 실제 CSV 구성을 검사한다. 메뉴에서 실행하는 모델 회귀 검사는 고정된 테스트용 데이터로 기존 전투 규칙을 확인한다.
-- 장비·던전·방치 보상과 라운드별 반복 설정을 개편한 Windows 버전은 `LOF/Builds/CourtExpedition/AFK-Trial.exe`로 실행한다. 다른 PC로 옮길 때는 `CourtExpedition` 폴더 전체를 복사한다. 이전 기사단 UI 버전은 `LOF/Builds/KnightCourt`에 있다. `Builds`는 Git 제외 폴더다.
+- 삼각 편성·장비 등급 가로 Windows 버전은 `LOF/Builds/FormationInventory/AFK-Trial.exe`로 실행한다. 다른 PC로 옮길 때는 `FormationInventory` 폴더 전체를 복사한다. `Builds`는 Git 제외 폴더다.
 - 이전 가로 전투 테스트 빌드는 `output/LandscapeTest/AFK-Trial.exe`에 있다. 당시 960×540 창에서 확인한 첫 스테이지와 양측 체력 패널은 편성창 추가 이전 캡처인 `output/LandscapePreview.png`에서 볼 수 있다.
 
 ## 환경

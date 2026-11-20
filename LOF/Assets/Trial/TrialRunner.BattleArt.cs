@@ -37,10 +37,24 @@ namespace AFKTrial
             padding = new RectOffset()
         });
 
+        private float StageHeaderOffset => !sideBattle && battle.BossStage ? 50f : 0f;
+
         private void DrawStageHeader(int width)
         {
             var dungeon = battle.ActiveDungeon;
-            ManuscriptFade(new Rect(0, 0, width, 108), new Color32(7, 18, 28, 246), new Color32(7, 18, 28, 0));
+            float offset = StageHeaderOffset;
+            ManuscriptFade(new Rect(0, 0, width, 108 + offset), new Color32(7, 18, 28, 246), new Color32(7, 18, 28, 0));
+            var boss = battle.ActiveBoss;
+            if (boss != null)
+            {
+                var plate = new Rect((width - 232) * 0.5f, 3, 232, 45);
+                ManuscriptFade(plate, new Color32(14, 22, 33, 244), new Color32(26, 35, 45, 220));
+                GUI.DrawTexture(new Rect(plate.x + 9, plate.y + 4, 28, 28), bossMark, ScaleMode.ScaleToFit);
+                CourtHeading(new Rect(plate.x + 40, plate.y, plate.width - 48, 31), boss.Name, 22, TextAnchor.MiddleCenter);
+                DrawHp(new Rect(plate.x + 40, plate.y + 30, plate.width - 48, 10), boss);
+                CourtRule(new Rect(plate.x + 5, plate.yMax - 1, plate.width - 10, 1), HudAmber);
+            }
+            GUI.BeginGroup(new Rect(0, offset, width, 108));
             GUI.DrawTexture(new Rect(13, 11, 48, 48), coatMedallion);
             GUI.DrawTexture(new Rect(17, 15, 40, 40), knightSeal, ScaleMode.ScaleToFit);
             string stageLine = dungeon != null ? dungeon.Difficulty : battle.StageName(battle.ActiveStage);
@@ -62,13 +76,14 @@ namespace AFKTrial
             else if (GUI.Button(action, "•••", button))
                 battleOptionsOpen = !battleOptionsOpen;
             DrawTimer(sideBattle ? new Rect(wallet.x - 98, 13, 92, 34) : new Rect(width - 112, 55, 100, 33));
+            GUI.EndGroup();
         }
 
         private void DrawBattleOptions(int width)
         {
             if (!battleOptionsOpen) return;
             GUI.enabled = !battle.Finished;
-            if (GUI.Button(new Rect(width - 198, 57, 186, 44), "Test: force defeat", button))
+            if (GUI.Button(new Rect(width - 198, 57 + StageHeaderOffset, 186, 44), "Test: force defeat", button))
             {
                 battle.ForceTimeout();
                 battleOptionsOpen = false;
@@ -76,16 +91,11 @@ namespace AFKTrial
             GUI.enabled = true;
         }
 
-        private void DrawUnitTag(TrialBattle.Unit unit, float x, float y)
+        private void DrawUnitHealth(TrialBattle.Unit unit, float x, float y)
         {
+            if (unit == battle.ActiveBoss) return;
             float top = unit.Ally && !sideBattle ? y + 50 : y - (sideBattle ? 67 : 64);
             DrawHp(new Rect(x - 25, top, 50, 5), unit);
-            if (!unit.Ally && unit.Stats != battle.Data.Enemies["normal"])
-            {
-                var boss = new Rect(x - 60, top - 23, 120, 22);
-                Fill(boss, HudInk);
-                ArcadeText(boss, unit.Name, 13, HudAmber, TextAnchor.MiddleCenter);
-            }
         }
         private void DrawBattlefield(Rect area)
         {
@@ -128,6 +138,7 @@ namespace AFKTrial
                 var card = new Rect(area.x + (width + 6) * slot, area.y, width, area.height);
                 var hero = battle.Units[slot];
                 int index = hero.HeroIndex;
+                if (index < 0) continue;
                 var role = hero.Stats.Role;
                 Color accent = RoleAccent(role);
                 Fill(card, new Color32(115, 108, 88, 255));

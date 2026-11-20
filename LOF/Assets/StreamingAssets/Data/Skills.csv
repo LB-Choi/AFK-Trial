@@ -2,7 +2,7 @@ heroId,slot,name,description,baseGoldCost,effect,interval
 ice_knight,1,Frost Ring,"Every 4 basic attacks, hit all enemies for 0.5 x n times ATK.",20,Wave,4
 ice_knight,2,Cold Snap,"Every 8s, reduce the target's attack speed by n% for 4s.",20,Slow,8
 ice_knight,3,Glacial Edge,"Every 10s, gain n% ATK for 6s.",20,Power,10
-scythe_knight,1,Soul Reap,"Every 5 basic attacks, strike for 100% ATK ignoring DEF.",20,Pierce,5
+scythe_knight,1,Soul Reap,"Every 6 basic attacks, strike for 100% ATK ignoring DEF.",20,Pierce,6
 scythe_knight,2,Armor Wither,"Every 5s, reduce the target's DEF by n% for 3s.",20,Sunder,5
 scythe_knight,3,Death Toll,"Every 12s, deal damage equal to n% of the target's current HP.",20,CurrentHp,12
 banner_paladin,1,Banner Bash,"Every 4 basic attacks, hit for 100% ATK and reduce the target's ATK by n% for 3s.",20,Weaken,4
@@ -10,22 +10,22 @@ banner_paladin,2,Marching Beat,"Every 7s, grant all allies n% attack speed for 4
 banner_paladin,3,Rallying Flag,"Every 10s, grant other allies n% ATK for 6s.",20,Rally,10
 lion_guardian,1,Lion's Rebuke,"Every 3 basic attacks, hit for 100% ATK and reduce the target's ATK by n% for 3s.",20,Weaken,3
 lion_guardian,2,Stone Mane,"Every 6s, gain n% DEF for 5s.",20,Fortify,6
-lion_guardian,3,Pride Aegis,"Every 12s, block the next incoming hit.",20,Guard,12
+lion_guardian,3,Pride Aegis,"Every 12s, reduce the target's current HP by n%.",20,DrainCurrentHp,12
 hammer_maid,1,Hammer Bell,"Every 3 basic attacks, strike for 100% ATK and stun for 0.2 x n seconds. Bosses recover twice as fast.",20,Stun,3
 hammer_maid,2,Field Repair,"Every 6s, heal all allies for n% of missing HP over 4s.",20,Mend,6
 hammer_maid,3,Steel Chorus,"Every 11s, grant all allies n% DEF for 5s.",20,TeamArmor,11
-katana_knight,1,Twin Cut,"Every (10 - n) basic attacks, strike for 200% ATK.",20,Double,10
+katana_knight,1,Twin Cut,"Every 7 basic attacks, strike for n times ATK.",20,Double,7
 katana_knight,2,Blade Focus,"Every 6s, double ATK for n seconds.",20,DoublePower,6
 katana_knight,3,Sword Oath,"Every 15s, gain n% ATK for 7s.",20,SwordOath,15
-royal_knight,1,Royal Thrust,"Every 4 basic attacks, strike for 100% ATK ignoring DEF.",20,Pierce,4
+royal_knight,1,Royal Thrust,"Every 8 basic attacks, strike for ATK plus n times your DEF.",20,ArmorStrike,8
 royal_knight,2,Royal Escort,"Every 8s, grant all allies n% DEF for 5s.",20,TeamArmor,8
 royal_knight,3,Royal Challenge,"Every 12s, draw each enemy's next basic attack.",20,Taunt,12
-sun_paladin,1,Solar Flare,"Every 6 basic attacks, make each enemy miss its next basic attack.",20,Blind,6
+sun_paladin,1,Solar Flare,"Every 6 basic attacks, make all enemies miss their basic attacks for 0.1 x n seconds.",20,Blind,6
 sun_paladin,2,Sunlit Balm,"Every 6s, heal all allies for n% of missing HP over 4s.",20,Mend,6
-sun_paladin,3,Shared Dawn,"Every (17 - n)s, redistribute surviving allies' HP to the same HP percentage.",20,Equalize,17
-tower_knight,1,Shield Call,"Every 4 basic attacks, draw each enemy's next basic attack.",20,Taunt,4
-tower_knight,2,Stonewall,"Every 5s, gain n% DEF for 5s.",20,Fortify,5
-tower_knight,3,Perfect Guard,"Every (10 - n)s, block the next incoming hit.",20,Guard,10
+sun_paladin,3,Shared Dawn,"Every 15s, heal for 10 x n% of surviving allies' total current HP, then equalize their HP percentages.",20,Equalize,15
+tower_knight,1,Shield Call,"Every 8 basic attacks, force all enemies to target you for 0.2 x n seconds.",20,TimedTaunt,8
+tower_knight,2,Stonewall,"Every 5s, gain n% DEF for 4s.",20,Fortify,5
+tower_knight,3,Perfect Guard,"Every 14s, refresh n% final damage reduction for the rest of this battle.",20,Guard,14
 axe_warrior,1,Cleave Wound,"Every 7 basic attacks, deal bonus damage equal to n% of the target's missing HP.",20,MissingHp,7
 axe_warrior,2,Frenzy,"Every 6s, attack at n times normal speed for 5s.",20,Frenzy,6
 axe_warrior,3,Axe Flurry,"Every 15s, strike the current target 2 x n times for 100% ATK each.",20,Flurry,15

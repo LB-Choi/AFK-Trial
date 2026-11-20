@@ -30,6 +30,12 @@ namespace AFKTrial.Editor
                 CheckSummonsAndSkills(NewBattle());
                 CheckDungeons(NewBattle());
                 CheckRepeatStage(NewBattle());
+                CheckOffAxisApproach(NewBattle());
+                for (int enemySlot = 3; enemySlot < 6; enemySlot++)
+                {
+                    CheckSharedTarget(NewBattle(), enemySlot, 0);
+                    CheckSharedTarget(NewBattle(), enemySlot, 65);
+                }
                 var roster = NewBattle();
                 for (int hero = 0; hero < roster.Heroes.Count; hero++)
                 {
@@ -81,20 +87,6 @@ namespace AFKTrial.Editor
                 Require(battle.Stage == 0 && battle.Gold == gold, "practice floor / no loss reward");
                 battle.Retry();
                 Require(battle.Stage == 2 && !battle.Farming && !battle.Finished, "manual retry");
-                var lanes = NewBattle();
-                var attacker = lanes.Units[1];
-                var target = lanes.Units[5];
-                attacker.Target = target;
-                float laneY = attacker.Position.y;
-                lanes.Tick(0.05f);
-                Require(attacker.Position.x > -2 && attacker.Position.y == laneY && attacker.Attacks == 0,
-                    "approach on X only while outside attack range");
-                attacker.Position.x = target.Position.x - 0.5f;
-                lanes.Tick(0.05f);
-                Require(attacker.Attacks == 1 && attacker.Position.y == laneY && target.Hp < target.MaxHp,
-                    "attack across lanes using horizontal range");
-                Require(target.LastHitTime == lanes.Elapsed && Mathf.Approximately(target.LastDamage, target.MaxHp - target.Hp),
-                    "floating damage matches HP loss");
                 var bossBattle = NewBattle();
                 for (int stage = 1; stage < 5; stage++)
                 {
@@ -128,6 +120,60 @@ namespace AFKTrial.Editor
                 Debug.LogException(error);
                 if (Application.isBatchMode) EditorApplication.Exit(1);
             }
+        }
+
+        private static void CheckOffAxisApproach(TrialBattle battle)
+        {
+            var attacker = battle.Units[1];
+            var target = battle.Units[5];
+            foreach (var unit in battle.Units)
+                if (unit != attacker && unit != target) unit.Hp = 0;
+
+            // Each axis alone is within reach. Hold the target still to measure reach at impact.
+            target.Stats = new TrialData.Fighter { Range = target.Stats.Range, Interval = target.Stats.Interval };
+            var start = target.Position - new Vector2(.55f, .59f);
+            attacker.Position = start;
+            battle.Tick(.05f);
+            Require(attacker.Position.y > start.y && attacker.Attacks == 0 && target.Hp == target.MaxHp,
+                "off-axis ally closes depth before hitting");
+            for (int frame = 0; frame < 80 && attacker.Attacks == 0; frame++)
+            {
+                battle.Tick(.05f);
+                if (Vector2.Distance(attacker.Position, target.Position) > attacker.Stats.Range + .0001f)
+                    Require(target.Hp == target.MaxHp, "diagonal separation is outside attack range");
+            }
+            Require(attacker.Attacks == 1 && target.LastHitTime == battle.Elapsed &&
+                Mathf.Approximately(target.LastDamage, target.MaxHp - target.Hp), "first in-range hit reports actual HP loss");
+        }
+
+        private static void CheckSharedTarget(TrialBattle battle, int enemySlot, int initialFightFrames)
+        {
+            var survivor = battle.Units[enemySlot];
+            foreach (var unit in battle.Units) unit.Hp = unit.MaxHp = 10000;
+            survivor.Attack = 0;
+            for (int frame = 0; frame < initialFightFrames; frame++) battle.Tick(.05f);
+            int[] initialAttacks = new int[3];
+            for (int slot = 0; slot < 3; slot++)
+            {
+                initialAttacks[slot] = battle.Units[slot].Attacks;
+                var foe = battle.Units[slot + 3];
+                if (foe != survivor) foe.Hp = 0;
+            }
+            for (int frame = 0; frame < 160; frame++)
+            {
+                battle.Tick(.05f);
+                for (int slot = 0; slot < 3; slot++)
+                {
+                    var ally = battle.Units[slot];
+                    Require(Vector2.Distance(ally.Position, survivor.Position) >= .37f, "keep contact spacing with target");
+                    for (int other = slot + 1; other < 3; other++)
+                        Require(Vector2.Distance(ally.Position, battle.Units[other].Position) >= .37f,
+                            "allies stay apart throughout approach and combat");
+                }
+            }
+            for (int slot = 0; slot < 3; slot++)
+                Require(battle.Units[slot].Target == survivor && battle.Units[slot].Attacks >= initialAttacks[slot] + 2,
+                    $"ally {slot} can repeatedly attack surviving enemy {enemySlot} after {initialFightFrames} initial ticks");
         }
 
         private static void CheckHeroGrowth(TrialBattle battle)
@@ -308,18 +354,49 @@ namespace AFKTrial.Editor
         private static void CheckSummonsAndSkills(TrialBattle battle)
         {
             int tickets = battle.Tickets;
-            var first = battle.Summon(1)[0];
+            var restored = new TrialBattle(battle.Data);
+            string savedJson = null;
+            int saveCount = 0;
+            bool Save(TrialBattle.Progress progress)
+            {
+                savedJson = JsonUtility.ToJson(progress);
+                saveCount++;
+                return true;
+            }
+            var first = battle.Summon(1, Save)[0];
             Require(!first.IsNew && first.Level == 2 && battle.Tickets == tickets - 1, "duplicate raises only drawn hero");
+            Require(saveCount == 1 && restored.RestoreProgress(JsonUtility.FromJson<TrialBattle.Progress>(savedJson)) &&
+                restored.Tickets == tickets - 1 && restored.HeroLevel(first.Hero) == 2, "single pull survives immediate reload");
             Require(!battle.Train(first.Hero, 0), "skill rejects insufficient gold");
             battle.Sell(battle.Inventory[1]);
-            int gold = battle.Gold, cost = battle.SkillCost(first.Hero, 0);
-            Require(battle.Train(first.Hero, 0) && battle.SkillLevel(first.Hero, 0) == 2 &&
+            int gold = battle.Gold;
+            long cost = battle.SkillCost(first.Hero, 0);
+            Require(!battle.Train(first.Hero, 0, _ => false) && battle.Gold == gold &&
+                battle.SkillLevel(first.Hero, 0) == 1, "failed skill save preserves gold and rank");
+            Require(battle.Train(first.Hero, 0, Save) && battle.SkillLevel(first.Hero, 0) == 2 &&
                 battle.SkillLevel(first.Hero, 1) == 1 && battle.Gold == gold - cost, "skill upgrade is per hero and slot");
+            Require(saveCount == 2 && restored.RestoreProgress(JsonUtility.FromJson<TrialBattle.Progress>(savedJson)) &&
+                restored.Gold == gold - cost && restored.SkillLevel(first.Hero, 0) == 2 &&
+                restored.SkillLevel(first.Hero, 1) == 1, "skill rank and payment survive immediate reload");
             battle.CreditIdle(2 * battle.Data.UpgradeGold, 2 * battle.Data.UpgradeXp);
             Require(battle.UpgradeHero(first.Hero) && battle.HeroLevel(first.Hero) == 3 &&
                 battle.HeroLevel((first.Hero + 1) % battle.Heroes.Count) == 1, "manual and duplicate levels accumulate on the same hero");
-            Require(battle.Summon(10).Length == 10 && battle.Summon(10) == null &&
-                battle.Tickets == tickets - 11, "ten pulls are all or nothing");
+            var before = battle.CaptureProgress();
+            int missing = battle.Heroes.Count - 1;
+            Array.Resize(ref before.heroes, before.heroes.Length - 1);
+            before.duplicateStreak = 9;
+            Require(battle.RestoreProgress(before), "set up a guaranteed new hero");
+            var liveBefore = JsonUtility.ToJson(battle.CaptureProgress());
+            Require(battle.Summon(10, _ => false) == null && JsonUtility.ToJson(battle.CaptureProgress()) == liveBefore,
+                "failed multi-pull save preserves tickets, roster, skills and pity");
+            var pulls = battle.Summon(10, Save);
+            Require(pulls.Length == 10 && pulls[0].Hero == missing && pulls[0].IsNew && pulls[0].Level == 1 &&
+                battle.Summon(10, Save) == null && battle.Tickets == tickets - 11 && saveCount == 3,
+                "all ten pulls commit once including the guaranteed new hero");
+            Require(restored.RestoreProgress(JsonUtility.FromJson<TrialBattle.Progress>(savedJson)) &&
+                restored.CaptureProgress().duplicateStreak == 0 && restored.SkillLevel(missing, 2) == 1 &&
+                JsonUtility.ToJson(restored.CaptureProgress()) == JsonUtility.ToJson(battle.CaptureProgress()),
+                "multi-pull wallet, pity, hero levels and initial skill ranks survive immediate reload");
             UntilFinished(battle);
             Require(battle.Won && battle.Tickets == tickets - 11 + battle.Data.FirstWinTickets, "first win tickets");
         }
@@ -360,6 +437,39 @@ namespace AFKTrial.Editor
                 id = hero.Id, level = 1, skills = new[] { 1, 1, 1 }
             }).ToArray();
             Require(battle.RestoreProgress(save), "skill test roster");
+            bool sawCombo = false, sawEnchant = false, sawStun = false, sawBossStun = false;
+            TrialBattle.Unit buffedIceKnight = null;
+            float buffTime = float.NegativeInfinity;
+            battle.SkillApplied += (cue, caster, recipient, time) =>
+            {
+                if (cue == TrialBattle.SkillCue.AttackUp && recipient == caster && caster.Stats.Id == "ice_knight")
+                {
+                    buffedIceKnight = recipient;
+                    buffTime = time;
+                }
+                if (cue == TrialBattle.SkillCue.FrostSwordEnchant)
+                {
+                    Require(caster.Stats.Id == "ice_knight" && recipient == caster &&
+                        caster.LastSkill == data.Skills[caster.HeroIndex, 2].Name &&
+                        recipient == buffedIceKnight && buffTime == time &&
+                        Mathf.Approximately(recipient.AttackBuffUntil, time + 6f), "Glacial Edge frost and attack buff");
+                    sawEnchant = true;
+                }
+                if (cue == TrialBattle.SkillCue.KatanaCombo)
+                {
+                    Require(caster.Stats.Id == "katana_knight" && caster.LastSkill == data.Skills[caster.HeroIndex, 0].Name &&
+                        recipient == caster.Target && !recipient.Ally, "Twin Cut effect on struck enemy");
+                    sawCombo = true;
+                }
+                if (cue == TrialBattle.SkillCue.StunStars && caster.Ally)
+                {
+                    bool boss = recipient == battle.ActiveBoss;
+                    Require(caster.Stats.Id == "hammer_maid" && caster.LastSkill == data.Skills[caster.HeroIndex, 0].Name &&
+                        recipient == caster.Target && !recipient.Ally &&
+                        Mathf.Approximately(recipient.StunnedUntil, time + (boss ? 0.1f : 0.2f)), "Hammer Bell rank-one stun duration");
+                    if (boss) sawBossStun = true; else sawStun = true;
+                }
+            };
             for (int hero = 0; hero < data.Heroes.Count; hero++)
             {
                 battle.ApplyFormation(new[] { hero, (hero + 1) % data.Heroes.Count, (hero + 2) % data.Heroes.Count });
@@ -374,6 +484,48 @@ namespace AFKTrial.Editor
                 for (int slot = 0; slot < 3; slot++)
                     Require(observed.Contains(data.Skills[hero, slot].Name), "cast " + data.Skills[hero, slot].Name);
             }
+            CheckFlankTaunt(battle);
+            save.stage = data.BossEvery;
+            save.highest = save.stage - 1;
+            Require(battle.RestoreProgress(save), "boss stun fixture");
+            int hammer = data.Heroes.FindIndex(hero => hero.Id == "hammer_maid");
+            battle.ApplyFormation(new[] { hammer, 0, 1 });
+            battle.StartBattle();
+            foreach (var unit in battle.Units)
+                unit.Hp = unit.MaxHp = unit.Ally || unit == battle.ActiveBoss ? 100000 : 0;
+            for (int i = 0; i < 550 && !sawBossStun; i++) battle.Tick(0.05f);
+            Require(sawCombo && sawEnchant && sawStun && sawBossStun, "weapon and stun effects observed");
+        }
+
+        private static void CheckFlankTaunt(TrialBattle battle)
+        {
+            int royal = battle.Data.Heroes.FindIndex(hero => hero.Id == "royal_knight");
+            battle.ApplyFormation(new[] { royal, 0, 1 });
+            battle.StartBattle();
+            foreach (var unit in battle.Units) unit.Hp = unit.MaxHp = 100000;
+            var knight = battle.Units[0];
+            int[] attacksAtCast = { -1, -1, -1 };
+            battle.SkillApplied += (cue, caster, foe, time) =>
+            {
+                if (cue == TrialBattle.SkillCue.Taunt && caster == knight)
+                    attacksAtCast[battle.Units.IndexOf(foe) - 3] = foe.Attacks;
+            };
+            int hits = 0;
+            for (int frame = 0; frame < 440 && hits < 3; frame++)
+            {
+                battle.Tick(.05f);
+                for (int slot = 0; slot < 3; slot++)
+                {
+                    var foe = battle.Units[slot + 3];
+                    if (attacksAtCast[slot] < 0 || foe.Attacks == attacksAtCast[slot]) continue;
+                    Require(foe.Target == null && knight.LastHitTime == battle.Elapsed &&
+                        Vector2.Distance(foe.Position, knight.Position) <= foe.Stats.Range + .0001f,
+                        "taunted enemy spends its next basic attack in reach of the Royal Knight");
+                    attacksAtCast[slot] = -1;
+                    hits++;
+                }
+            }
+            Require(hits == 3, "all three enemies reach a Royal Knight taunting from the outer lane");
         }
 
         private static void CheckEquipment(TrialBattle battle)

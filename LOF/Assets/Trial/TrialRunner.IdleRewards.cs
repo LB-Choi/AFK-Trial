@@ -165,11 +165,23 @@ namespace AFKTrial
             TrySaveProgress(battle.CaptureProgress(), pendingSeconds, victory);
         }
 
-        private bool TryPurchaseHeroLevel(int hero)
+        private bool SaveMenuPurchase(TrialBattle.Progress progress)
         {
             if (progressLock == null || suspended || HasPendingIdleReward) return false;
             lastSeenUtc = Math.Max(lastSeenUtc, UtcNow);
-            return battle.UpgradeHero(hero, progress => TrySaveProgress(progress, pendingSeconds));
+            return TrySaveProgress(progress, pendingSeconds);
+        }
+
+        private bool TryPurchaseHeroLevel(int hero) => battle.UpgradeHero(hero, SaveMenuPurchase);
+        private bool TryTrainSkill(int hero, int slot) => battle.Train(hero, slot, SaveMenuPurchase);
+
+        private bool TrySummon(int count)
+        {
+            var pulls = battle.Summon(count, SaveMenuPurchase);
+            if (pulls == null) return false;
+            lastPulls = pulls;
+            animationStart = Time.unscaledTime;
+            return true;
         }
 
         private void ConfirmIdleReward()
@@ -195,7 +207,11 @@ namespace AFKTrial
         }
 
         private void OnApplicationQuit() => CloseProgressSession();
-        private void OnDisable() => CloseProgressSession();
+        private void OnDisable()
+        {
+            ReleaseSkillEffects();
+            CloseProgressSession();
+        }
 
         private void CloseProgressSession()
         {

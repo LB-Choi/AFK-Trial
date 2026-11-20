@@ -28,11 +28,15 @@ namespace AFKTrial
         {
             public Texture2D Texture;
             public Rect Bounds;
+            public Vector2 BladeGuard, BladeTip;
+            public Rect ScreenBounds(Vector2 origin, float scale) =>
+                new Rect(origin + Bounds.position * scale, Bounds.size * scale);
         }
 
         private readonly bool hasSetupPose;
         private readonly Slot[] slots;
         private readonly Dictionary<string, Drawing>[] drawings;
+        private readonly int bladeSlot = -1;
         private readonly Clip idle, walk, attack;
         private readonly float breathCycle, stride, recovery;
         public readonly float ImpactTime;
@@ -98,6 +102,19 @@ namespace AFKTrial
                     });
                 }
             }
+            if (resource == "IceKnightRig/IceKnight")
+            {
+                bladeSlot = Array.FindIndex(slots, slot => slot.name == "pose");
+                string directory = Path.Combine(Application.streamingAssetsPath, "SkillEffects");
+                foreach (var row in CsvRow.Read(directory, "IceKnightBlade"))
+                {
+                    string attachment = row.Text("attachment");
+                    if (bladeSlot < 0 || !drawings[bladeSlot].TryGetValue(attachment, out Drawing pose))
+                        throw row.Error("unknown blade attachment " + attachment);
+                    pose.BladeGuard = new Vector2(row.Number("guardX"), row.Number("guardY"));
+                    pose.BladeTip = new Vector2(row.Number("tipX"), row.Number("tipY"));
+                }
+            }
         }
 
         private static float Duration(Clip clip)
@@ -135,6 +152,36 @@ namespace AFKTrial
             return area.center + Vector2.up * ((151 - height) * scale);
         }
 
+        private Drawing SelectDrawing(int index, Clip clip, float time)
+        {
+            Slot slot = slots[index];
+            string name = slot.attachment;
+            if (clip != null && clip.slots.TryGetValue(slot.name, out Track track))
+            {
+                foreach (Key key in track.attachment)
+                {
+                    if (key.time > time) break;
+                    name = key.name;
+                }
+            }
+            return name == null ? null : drawings[index][name];
+        }
+
+        internal bool TryGetBladeSegment(Rect area, TrialBattle.Unit unit, float elapsed,
+            out Vector2 guard, out Vector2 tip)
+        {
+            guard = tip = Vector2.zero;
+            if (bladeSlot < 0) return false;
+            Clip clip = SelectClip(unit, elapsed, out float time);
+            Drawing pose = SelectDrawing(bladeSlot, clip, time);
+            if (pose == null || pose.BladeGuard == pose.BladeTip) return false;
+            Vector2 origin = ScreenPointAtHeight(area, 0, out float scale);
+            Rect bounds = pose.ScreenBounds(origin, scale);
+            guard = Rect.NormalizedToPoint(bounds, pose.BladeGuard);
+            tip = Rect.NormalizedToPoint(bounds, pose.BladeTip);
+            return true;
+        }
+
         public void Draw(Rect area, TrialBattle.Unit unit, float elapsed, Texture2D portrait)
         {
             if (Event.current.type != EventType.Repaint) return;
@@ -147,19 +194,8 @@ namespace AFKTrial
             Vector2 origin = ScreenPointAtHeight(area, 0, out float scale);
             for (int i = 0; i < slots.Length; i++)
             {
-                Slot slot = slots[i];
-                string name = slot.attachment;
-                if (clip != null && clip.slots.TryGetValue(slot.name, out Track track))
-                {
-                    foreach (Key key in track.attachment)
-                    {
-                        if (key.time > time) break;
-                        name = key.name;
-                    }
-                }
-                if (name == null) continue;
-                Drawing pose = drawings[i][name];
-                GUI.DrawTexture(new Rect(origin + pose.Bounds.position * scale, pose.Bounds.size * scale), pose.Texture);
+                Drawing pose = SelectDrawing(i, clip, time);
+                if (pose != null) GUI.DrawTexture(pose.ScreenBounds(origin, scale), pose.Texture);
             }
         }
     }

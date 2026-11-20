@@ -74,7 +74,6 @@ namespace AFKTrial.Editor
             foreach (var unit in battle.Units)
                 if (unit != attacker && unit != target) unit.Hp = 0;
             target.Cooldown = 100;
-            attacker.SwingSpeed = speed;
             float initialHp = target.Hp;
             float spawnX = attacker.Position.x;
             battle.Tick(.01f);
@@ -84,6 +83,8 @@ namespace AFKTrial.Editor
             Require(attacker.WindingUp && !attacker.Walking && attacker.Target == target,
                 "bandit plants its feet to attack in range");
 
+            // The battle sets the swing speed when it starts the windup.
+            attacker.SwingSpeed = speed;
             const float margin = .002f;
             battle.Tick(attacker.Stats.ImpactSeconds / speed - margin);
             Require(target.Hp == initialHp && attacker.Attacks == 0, "no damage before full extension");
