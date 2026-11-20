@@ -165,6 +165,7 @@ namespace AFKTrial.Editor
                 for (int slot = 0; slot < 3; slot++)
                 {
                     var ally = battle.Units[slot];
+                    Require(ally.Position.x < survivor.Position.x, "allies stay on their side of the defender");
                     Require(Vector2.Distance(ally.Position, survivor.Position) >= .37f, "keep contact spacing with target");
                     for (int other = slot + 1; other < 3; other++)
                         Require(Vector2.Distance(ally.Position, battle.Units[other].Position) >= .37f,

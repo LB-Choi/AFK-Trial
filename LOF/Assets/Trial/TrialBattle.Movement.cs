@@ -5,7 +5,7 @@ namespace AFKTrial
     public sealed partial class TrialBattle
     {
         private const float BodySpacing = .48f;
-        private const int DetourSides = 12;
+        private const int DetourSides = 24;
         private static readonly Vector2[] detourDirections = MakeDetourDirections();
         private Vector2[] pathPoints;
         private float[] pathCosts;
@@ -63,6 +63,11 @@ namespace AFKTrial
             foreach (var other in Units)
             {
                 if (!other.Alive || other.Ally == unit.Ally) continue;
+                if (unit.Attacks == 0 && other.Lane == unit.Lane)
+                {
+                    unit.Target = other;
+                    break;
+                }
                 float distance = (other.Position - unit.Position).sqrMagnitude;
                 if (distance >= closest) continue;
                 closest = distance;
@@ -113,7 +118,8 @@ namespace AFKTrial
                 if (foe.Alive && foe.Ally != unit.Ally)
                     limit = Mathf.Min(limit, direction * foe.Position.x - .01f);
             destination.x = direction * Mathf.Min(direction * destination.x, limit);
-            if (ClearPath(unit, unit.Position, destination)) unit.Waypoint = null;
+            bool reachableStrike = (destination - unit.Target.Position).sqrMagnitude <= unit.Stats.Range * unit.Stats.Range;
+            if (reachableStrike && ClearPath(unit, unit.Position, destination)) unit.Waypoint = null;
             else
             {
                 if (!unit.Waypoint.HasValue || (unit.Waypoint.Value - unit.Position).sqrMagnitude < .001f ||
@@ -129,7 +135,7 @@ namespace AFKTrial
         // The small clearance around each ring keeps chords between adjacent points walkable.
         private Vector2? FindDetour(Unit unit, Vector2 destination, float facing, float limit)
         {
-            int capacity = 2 + Units.Count * DetourSides;
+            int capacity = 2 + (Units.Count + 1) * DetourSides;
             if (pathPoints == null || pathPoints.Length < capacity)
             {
                 pathPoints = new Vector2[capacity];
@@ -150,6 +156,14 @@ namespace AFKTrial
                     if (facing * point.x <= limit) pathPoints[count++] = point;
                 }
             }
+            if (unit.Stats.ContactDistance <= 0)
+            {
+                foreach (var offset in detourDirections)
+                {
+                    Vector2 point = unit.Target.Position + offset * (unit.Stats.Range * .98f);
+                    if (facing * point.x <= limit) pathPoints[count++] = point;
+                }
+            }
             for (int i = 0; i < count; i++)
             {
                 pathCosts[i] = float.PositiveInfinity;
@@ -167,7 +181,7 @@ namespace AFKTrial
                     float estimate = pathCosts[i] + Vector2.Distance(pathPoints[i], destination);
                     if (estimate < lowest) { lowest = estimate; current = i; }
                 }
-                if (current == 1) return pathPoints[firstHops[1]];
+                if (current == 1 && (destination - unit.Target.Position).sqrMagnitude <= unit.Stats.Range * unit.Stats.Range) return pathPoints[firstHops[1]];
                 if (current < 0) break;
                 visited[current] = true;
                 Vector2 point = pathPoints[current];
