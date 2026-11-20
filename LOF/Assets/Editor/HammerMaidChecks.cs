@@ -32,6 +32,7 @@ namespace AFKTrial.Editor
                     hero.ImpactSeconds = impact;
                     var battle = new TrialBattle(data);
                     battle.ApplyFormation(new[] { data.Heroes.IndexOf(hero), 0, 1 });
+                    battle.StartBattle();
                     var attacker = battle.Units.Find(u => u.Stats == hero);
                     var target = battle.Units[3];
                     foreach (var unit in battle.Units) unit.Cooldown = 100;

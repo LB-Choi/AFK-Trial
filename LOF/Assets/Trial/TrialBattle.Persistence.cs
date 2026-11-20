@@ -5,10 +5,32 @@ namespace AFKTrial
 {
     public sealed partial class TrialBattle
     {
+        private readonly int[] clearedDungeonTiers = new int[2];
+
+        public bool CanEnterDungeon(TrialData.DungeonTier tier) =>
+            tier != null && Data.Dungeons[(int)tier.Kind, tier.Index] == tier &&
+            Highest >= Data.BossEvery && tier.Index <= clearedDungeonTiers[(int)tier.Kind];
+
+        public bool IsDungeonCleared(TrialData.DungeonTier tier) =>
+            tier != null && tier.Index < clearedDungeonTiers[(int)tier.Kind];
+
+        private (int gold, int experience) CreditDungeonVictory(TrialData.DungeonTier tier)
+        {
+            int oldGold = Gold, oldExperience = Experience;
+            Gold = AddCurrency(Gold, tier.Gold);
+            Experience = AddCurrency(Experience, tier.Experience);
+            int kind = (int)tier.Kind;
+            clearedDungeonTiers[kind] = Math.Max(clearedDungeonTiers[kind], tier.Index + 1);
+            return (Gold - oldGold, Experience - oldExperience);
+        }
+
         [Serializable]
         public sealed class Progress
         {
-            public int highest, stage, level, gold, experience, tickets, duplicateStreak;
+            public int highest, stage, gold, experience, tickets, duplicateStreak;
+            // The version 1 save format requires a positive team baseline. Hero records carry absolute levels.
+            public int level = 1;
+            public int goldVaultClears, experienceArchiveClears, repeatStage;
             public bool farming;
             public string[] formation;
             public HeroProgress[] heroes;
@@ -28,32 +50,34 @@ namespace AFKTrial
         {
             public string name, ownerId;
             public TrialData.GearSlot slot;
-            public int bonus, sellGold;
+            public int bonus, sellGold, enhancement, step;
         }
+
+        private GearProgress CaptureItem(Item item) => new GearProgress {
+            enhancement = item.Enhancement, step = item.Gear.Step,
+            name = item.Gear.Name, slot = item.Gear.Slot, bonus = item.Gear.Bonus, sellGold = item.Gear.SellGold,
+            ownerId = item.Owner < 0 ? "" : Data.Heroes[item.Owner].Id
+        };
 
         public Progress CaptureProgress()
         {
             var heroes = new List<HeroProgress>();
-            for (int i = 0; i < owned.Length; i++)
+            for (int i = 0; i < heroLevels.Length; i++)
             {
-                if (!owned[i]) continue;
+                if (!Owned(i)) continue;
                 heroes.Add(new HeroProgress {
-                    id = Data.Heroes[i].Id, level = HeroLevel(i, Level),
+                    id = Data.Heroes[i].Id, level = HeroLevel(i),
                     skills = new[] { skillLevels[i, 0], skillLevels[i, 1], skillLevels[i, 2] }
                 });
             }
             var items = new GearProgress[inventory.Count];
             for (int i = 0; i < items.Length; i++)
-            {
-                var item = inventory[i];
-                items[i] = new GearProgress {
-                    name = item.Gear.Name, slot = item.Gear.Slot, bonus = item.Gear.Bonus, sellGold = item.Gear.SellGold,
-                    ownerId = item.Owner < 0 ? "" : Data.Heroes[item.Owner].Id
-                };
-            }
+                items[i] = CaptureItem(inventory[i]);
             return new Progress {
-                highest = Highest, stage = Stage, farming = Farming, level = Level, gold = Gold,
+                highest = Highest, stage = Stage, farming = Farming, gold = Gold, repeatStage = RepeatStage,
                 experience = Experience, tickets = Tickets, duplicateStreak = duplicateStreak,
+                goldVaultClears = clearedDungeonTiers[(int)TrialData.DungeonKind.GoldVault],
+                experienceArchiveClears = clearedDungeonTiers[(int)TrialData.DungeonKind.ExperienceArchive],
                 formation = Array.ConvertAll(formation, index => Data.Heroes[index].Id),
                 heroes = heroes.ToArray(), inventory = items
             };
@@ -63,12 +87,15 @@ namespace AFKTrial
         {
             if (saved == null || saved.highest < 0 || saved.highest == int.MaxValue || saved.stage < 0 ||
                 (saved.farming ? saved.stage > saved.highest : saved.stage != saved.highest + 1) ||
+                saved.repeatStage < 0 || saved.repeatStage > saved.highest ||
                 saved.level < 1 || saved.gold < 0 || saved.experience < 0 || saved.tickets < 0 ||
                 saved.duplicateStreak < 0 || saved.duplicateStreak > 9 ||
+                saved.goldVaultClears < 0 || saved.goldVaultClears > TrialData.DungeonTierCount ||
+                saved.experienceArchiveClears < 0 || saved.experienceArchiveClears > TrialData.DungeonTierCount ||
                 saved.formation == null || saved.formation.Length != formation.Length ||
                 saved.heroes == null || saved.inventory == null) return false;
 
-            var roster = new HeroProgress[owned.Length];
+            var roster = new HeroProgress[heroLevels.Length];
             foreach (var hero in saved.heroes)
             {
                 if (hero == null || hero.level < 1 || hero.skills == null || hero.skills.Length != 3 ||
@@ -85,7 +112,7 @@ namespace AFKTrial
             var equippedSlots = new HashSet<(int, TrialData.GearSlot)>();
             foreach (var gear in saved.inventory)
             {
-                if (gear == null || string.IsNullOrEmpty(gear.name) || gear.bonus < 1 || gear.sellGold < 1 ||
+                if (gear == null || string.IsNullOrEmpty(gear.name) || gear.enhancement < 0 || gear.step < 0 || gear.bonus < 1 || gear.sellGold < 1 ||
                     !Enum.IsDefined(typeof(TrialData.GearSlot), gear.slot)) return false;
                 int owner = -1;
                 if (!string.IsNullOrEmpty(gear.ownerId))
@@ -93,25 +120,28 @@ namespace AFKTrial
                     owner = Data.Heroes.FindIndex(hero => hero.Id == gear.ownerId);
                     if (owner < 0 || roster[owner] == null || !equippedSlots.Add((owner, gear.slot))) return false;
                 }
+                var template = Data.StarterGear.Find(g => g.Name == gear.name && g.Slot == gear.slot);
                 var definition = new TrialData.Gear {
+                    Step = gear.step > 0 ? gear.step : (template?.Step ?? 1),
                     Name = gear.name, Slot = gear.slot, Bonus = gear.bonus, SellGold = gear.sellGold
                 };
-                items.Add(new Item(definition) { Owner = owner });
+                items.Add(new Item(definition) { Owner = owner, Enhancement = gear.enhancement });
             }
 
             Highest = saved.highest;
+            RepeatStage = saved.repeatStage;
             Stage = saved.stage;
             Farming = saved.farming;
-            Level = saved.level;
             Gold = saved.gold;
             Experience = saved.experience;
             Tickets = saved.tickets;
             duplicateStreak = saved.duplicateStreak;
+            clearedDungeonTiers[(int)TrialData.DungeonKind.GoldVault] = saved.goldVaultClears;
+            clearedDungeonTiers[(int)TrialData.DungeonKind.ExperienceArchive] = saved.experienceArchiveClears;
             for (int i = 0; i < roster.Length; i++)
             {
                 var hero = roster[i];
-                owned[i] = hero != null;
-                levelOffset[i] = hero == null ? 0 : hero.level - Level;
+                heroLevels[i] = hero?.level ?? 0;
                 for (int slot = 0; slot < 3; slot++)
                     skillLevels[i, slot] = hero == null ? 0 : hero.skills[slot];
             }

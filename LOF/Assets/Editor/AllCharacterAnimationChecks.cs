@@ -35,6 +35,7 @@ namespace AFKTrial.Editor
                     var battle = new TrialBattle(data);
                     int index = data.Heroes.IndexOf(hero);
                     battle.ApplyFormation(new[] { index, (index + 1) % data.Heroes.Count, (index + 2) % data.Heroes.Count });
+                    battle.StartBattle();
                     var attacker = battle.Units.Find(u => u.Stats == hero);
                     var target = battle.Units[3];
                     foreach (var unit in battle.Units) unit.Cooldown = 100;

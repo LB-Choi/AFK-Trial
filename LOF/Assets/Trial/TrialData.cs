@@ -13,19 +13,48 @@ namespace AFKTrial
         public sealed class Skill
         {
             public string Name, Description;
-            public int BaseGoldCost;
+            public int BaseGoldCost, Interval;
+            public SkillEffect Effect;
         }
         public readonly Skill[,] Skills;
         public readonly bool StartWithAllHeroes;
         public readonly int StartingTickets, FirstWinTickets, FirstBossTickets;
         public readonly int IdleCapHours, IdleEfficiencyPercent, IdleReferenceClearSeconds;
 
+        public enum DungeonKind { GoldVault, ExperienceArchive }
+        public const int DungeonTierCount = 3;
+        public readonly DungeonTier[,] Dungeons = new DungeonTier[2, DungeonTierCount];
+
+        public sealed class DungeonTier
+        {
+            private static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard" };
+            public readonly DungeonKind Kind;
+            public readonly int Index, Gold, Experience;
+            public readonly float Power, Seconds;
+            public string Name => Kind == DungeonKind.GoldVault ? "Gold Vault" : "Experience Archive";
+            public string Difficulty => DifficultyNames[Index];
+
+            internal DungeonTier(CsvRow row)
+            {
+                if (!Enum.TryParse(row.Text("kind"), out DungeonKind kind) || !Enum.IsDefined(typeof(DungeonKind), kind))
+                    throw row.Error("unknown dungeon kind");
+                Kind = kind;
+                Index = row.Integer("tier", 1) - 1;
+                if (Index >= DungeonTierCount) throw row.Error("tier must be 1 to 3");
+                Power = row.Number("power", true);
+                Seconds = row.Number("seconds", true);
+                int reward = row.Integer("reward", 1);
+                if (kind == DungeonKind.GoldVault) Gold = reward;
+                else Experience = reward;
+            }
+        }
+
         public enum GearSlot { Weapon, Armor, Necklace }
         public sealed class Gear
         {
             public string Name;
             public GearSlot Slot;
-            public int Bonus, SellGold;
+            public int Bonus, SellGold, Step;
         }
         public readonly List<Gear> StarterGear = new List<Gear>();
 
@@ -35,6 +64,7 @@ namespace AFKTrial
         {
             public string Id, Name, Portrait, Animation;
             public Role Role;
+            public int BaseArmor, ArmorPerLevel;
             public float Hp, Attack, HpPerLevel, AttackPerLevel, Speed, Range, Interval, ImpactSeconds;
             public float ContactDistance, AttackDuration, HitHeight;
         }
@@ -44,6 +74,7 @@ namespace AFKTrial
         public readonly Dictionary<string, Fighter> Enemies = new Dictionary<string, Fighter>();
         public readonly Fighter RoundBoss;
         public readonly int[] StartingFormation = { -1, -1, -1 };
+        public readonly int EnhanceGold, NormalDrop, BossDrop;
         public readonly int RoundLength, BossEvery, BossSlot, PracticeGold, BaseGold, GoldPerStage,
             PracticeXp, BaseXp, XpPerStage, FirstWinMultiplier, UpgradeGold, UpgradeXp;
         public readonly float NormalSeconds, BossSeconds, PracticePower, BasePower, PowerPerStage,
@@ -57,6 +88,14 @@ namespace AFKTrial
 
         public TrialData(string directory)
         {
+            foreach (var row in CsvRow.Read(directory, "Dungeons"))
+            {
+                var tier = new DungeonTier(row);
+                if (Dungeons[(int)tier.Kind, tier.Index] != null) throw row.Error("duplicate dungeon tier");
+                Dungeons[(int)tier.Kind, tier.Index] = tier;
+            }
+            foreach (var tier in Dungeons)
+                if (tier == null) throw new InvalidDataException("Dungeons.csv requires three tiers for each dungeon.");
             var idle = CsvRow.Single(directory, "IdleRewards");
             IdleCapHours = idle.Integer("capHours", 1);
             IdleEfficiencyPercent = idle.Integer("efficiencyPercent", 1);
@@ -67,7 +106,7 @@ namespace AFKTrial
                 if (!Enum.TryParse(row.Text("slot"), out GearSlot slot) || !Enum.IsDefined(typeof(GearSlot), slot))
                     throw row.Error("invalid equipment slot");
                 StarterGear.Add(new Gear { Name = row.Text("name"), Slot = slot,
-                    Bonus = row.Integer("bonus", 1), SellGold = row.Integer("sellGold", 1) });
+                    Bonus = row.Integer("bonus", 1), Step = row.Integer("bonusPerEnhancement", 1, 1), SellGold = row.Integer("sellGold", 1) });
             }
             var impacts = new Dictionary<string, float>();
             foreach (var row in CsvRow.Read(directory, "Animations"))
@@ -87,6 +126,8 @@ namespace AFKTrial
                 hero.Portrait = row.Text("portrait");
                 hero.HpPerLevel = row.Number("hpPerLevel");
                 hero.AttackPerLevel = row.Number("attackPerLevel");
+                hero.BaseArmor = row.Integer("baseArmor", fallback: 0);
+                hero.ArmorPerLevel = row.Integer("armorPerLevel", fallback: 0);
                 int slot = row.Integer("startingSlot");
                 if (slot > StartingFormation.Length) throw row.Error("startingSlot must be 0 to 3");
                 if (slot > 0)
@@ -113,7 +154,9 @@ namespace AFKTrial
                 int slot = row.Integer("slot", 1) - 1;
                 if (hero < 0 || slot >= 3 || Skills[hero, slot] != null) throw row.Error("invalid or duplicate hero/slot");
                 Skills[hero, slot] = new Skill { Name = row.Text("name"), Description = row.Text("description", true),
-                    BaseGoldCost = row.Integer("baseGoldCost", 1) };
+                    BaseGoldCost = row.Integer("baseGoldCost", 1), Interval = row.Integer("interval", 1, 1) };
+                if (!Enum.TryParse(row.Optional("effect", "None"), out Skills[hero, slot].Effect) ||
+                    !Enum.IsDefined(typeof(SkillEffect), Skills[hero, slot].Effect)) throw row.Error("invalid skill effect");
             }
             foreach (var skill in Skills)
                 if (skill == null) throw new InvalidDataException("Skills.csv requires three slots per hero.");
@@ -134,6 +177,10 @@ namespace AFKTrial
             if (!Enemies.ContainsKey("normal") || !Enemies.ContainsKey("boss"))
                 throw new InvalidDataException("Enemies.csv requires normal and boss.");
             var p = CsvRow.Single(directory, "Progression");
+            EnhanceGold = p.Integer("enhanceGold", 1, 20);
+            NormalDrop = p.Integer("normalGearPercent", 0, 5);
+            BossDrop = p.Integer("bossGearPercent", 0, 10);
+            if (NormalDrop > 100 || BossDrop > 100) throw p.Error("invalid gear drop percentage");
             RoundLength = p.Integer("roundLength", 1);
             string roundBossId = p.Optional("roundBoss", "boss");
             if (!Enemies.TryGetValue(roundBossId, out RoundBoss)) throw p.Error("unknown roundBoss " + roundBossId);
@@ -215,8 +262,9 @@ namespace AFKTrial
                 throw Error("invalid " + key);
             return n;
         }
-        public int Integer(string key, int min = 0)
+        public int Integer(string key, int min = 0, int? fallback = null)
         {
+            if (fallback.HasValue && !fields.ContainsKey(key)) return fallback.Value;
             if (!int.TryParse(Text(key), NumberStyles.Integer, Invariant, out var n) || n < min) throw Error("invalid " + key);
             return n;
         }

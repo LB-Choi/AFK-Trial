@@ -9,6 +9,8 @@ namespace AFKTrial
     {
         public long AwaySeconds, CreditedSeconds;
         public int Stage, Gold, Experience;
+        public TrialBattle.IdleEquipment Equipment;
+        public string EquipmentSummary;
     }
 
     public sealed partial class TrialRunner
@@ -17,7 +19,7 @@ namespace AFKTrial
         private sealed class SaveRecord
         {
             public int version;
-            public long lastSeenUtc, pendingSeconds;
+            public long lastSeenUtc, pendingSeconds, equipmentSeed;
             public TrialBattle.Progress progress;
         }
 
@@ -26,11 +28,12 @@ namespace AFKTrial
         private const long MaxUtcSeconds = 253402300799L;
         private FileStream progressLock;
         private string progressPath, victoryBackupPath, idleSaveError;
-        private long lastSeenUtc, pendingSeconds;
+        private long lastSeenUtc, pendingSeconds, equipmentSeed;
         private double nextCheckpoint;
         private bool suspended;
         private TrialIdleReward PendingIdleReward { get; set; }
-        private bool HasPendingIdleReward => PendingIdleReward.Gold > 0 || PendingIdleReward.Experience > 0;
+        private bool HasPendingIdleReward => PendingIdleReward.Gold > 0 || PendingIdleReward.Experience > 0 ||
+            PendingIdleReward.Equipment?.Items.Count > 0 || PendingIdleReward.Equipment?.Converted > 0;
         private static long UtcNow => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         private TrialIdleReward EstimateIdleReward(long seconds)
@@ -74,6 +77,7 @@ namespace AFKTrial
                 long now = UtcNow;
                 lastSeenUtc = record?.lastSeenUtc ?? now;
                 pendingSeconds = record?.pendingSeconds ?? 0;
+                equipmentSeed = record?.equipmentSeed ?? 0;
                 suspended = false;
                 CountTimeAway(now);
                 WriteProgress(battle.CaptureProgress(), pendingSeconds);
@@ -104,19 +108,23 @@ namespace AFKTrial
 
         private void CountTimeAway(long now)
         {
+            if (equipmentSeed == 0) equipmentSeed = lastSeenUtc;
             pendingSeconds = Math.Min(MaxUtcSeconds, pendingSeconds + Math.Max(0L, now - lastSeenUtc));
             lastSeenUtc = Math.Max(lastSeenUtc, now);
             var reward = EstimateIdleReward(pendingSeconds);
-            reward.Gold = Math.Min(reward.Gold, int.MaxValue - battle.Gold);
+            var gear = battle.EstimateIdleEquipment(reward.CreditedSeconds, unchecked((int)equipmentSeed));
+            reward.Equipment = gear;
+            reward.EquipmentSummary = DescribeIdleEquipment(gear);
+            reward.Gold = (int)Math.Min((long)reward.Gold + gear.ConversionGold, int.MaxValue - battle.Gold);
             reward.Experience = Math.Min(reward.Experience, int.MaxValue - battle.Experience);
             PendingIdleReward = reward;
-            if (!HasPendingIdleReward) pendingSeconds = 0;
+            if (!HasPendingIdleReward) pendingSeconds = equipmentSeed = 0;
         }
 
         private void WriteProgress(TrialBattle.Progress progress, long unclaimedSeconds, bool victory = false)
         {
             var record = new SaveRecord { version = SaveVersion, lastSeenUtc = lastSeenUtc,
-                pendingSeconds = unclaimedSeconds, progress = progress };
+                pendingSeconds = unclaimedSeconds, equipmentSeed = unclaimedSeconds > 0 ? equipmentSeed : 0, progress = progress };
             byte[] bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(record));
             WriteAtomically(progressPath, bytes);
             if (victory) WriteAtomically(victoryBackupPath, bytes);
@@ -157,18 +165,20 @@ namespace AFKTrial
             TrySaveProgress(battle.CaptureProgress(), pendingSeconds, victory);
         }
 
+        private bool TryPurchaseHeroLevel(int hero)
+        {
+            if (progressLock == null || suspended || HasPendingIdleReward) return false;
+            lastSeenUtc = Math.Max(lastSeenUtc, UtcNow);
+            return battle.UpgradeHero(hero, progress => TrySaveProgress(progress, pendingSeconds));
+        }
+
         private void ConfirmIdleReward()
         {
             if (progressLock == null || suspended || !HasPendingIdleReward) return;
             var reward = PendingIdleReward;
-            var progress = battle.CaptureProgress();
-            progress.gold += reward.Gold;
-            progress.experience += reward.Experience;
             lastSeenUtc = Math.Max(lastSeenUtc, UtcNow);
-            // The credited wallet and the consumed claim become durable in the same replacement.
-            if (!TrySaveProgress(progress, 0)) return;
-            battle.CreditIdle(reward.Gold, reward.Experience);
-            pendingSeconds = 0;
+            if (!battle.CollectIdle(reward.Gold, reward.Experience, reward.Equipment, progress => TrySaveProgress(progress, 0))) return;
+            pendingSeconds = equipmentSeed = 0;
             PendingIdleReward = default;
         }
 
