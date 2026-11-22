@@ -28,11 +28,11 @@ namespace AFKTrial
 
         public sealed class DungeonTier
         {
-            private static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard" };
+            private static readonly string[] DifficultyNames = { "쉬움", "보통", "어려움" };
             public readonly DungeonKind Kind;
             public readonly int Index, Gold, Experience, FirstClearTickets;
             public readonly float Power, Seconds;
-            public string Name => Kind == DungeonKind.GoldVault ? "Gold Vault" : "Experience Archive";
+            public string Name => Kind == DungeonKind.GoldVault ? "골드 금고" : "경험치 기록보관소";
             public string Difficulty => DifficultyNames[Index];
 
             internal DungeonTier(CsvRow row)

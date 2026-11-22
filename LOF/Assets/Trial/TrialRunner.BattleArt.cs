@@ -56,11 +56,11 @@ namespace AFKTrial
             GUI.BeginGroup(new Rect(0, offset, width, 108));
             GUI.DrawTexture(new Rect(13, 11, 48, 48), coatMedallion);
             GUI.DrawTexture(new Rect(17, 15, 40, 40), knightSeal, ScaleMode.ScaleToFit);
-            string stageLine = dungeon != null ? dungeon.Difficulty : battle.StageName(battle.ActiveStage);
+            string stageLine = dungeon != null ? dungeon.Difficulty : StageLabel(battle.ActiveStage);
             if (dungeon == null && (battle.ActiveRepeat || battle.ActiveFarming || battle.BossStage))
-                stageLine += battle.ActiveRepeat ? "   ·   REPEAT" : battle.ActiveFarming ? "   ·   FARM" : "   ·   BOSS";
+                stageLine += battle.ActiveRepeat ? "   ·   반복" : battle.ActiveFarming ? "   ·   파밍" : "   ·   보스";
             ArcadeText(new Rect(71, 9, sideBattle ? 350 : 222, 21), stageLine, 12, HudAmber, TextAnchor.MiddleLeft);
-            CourtHeading(new Rect(69, 27, sideBattle ? 360 : 225, 44), dungeon?.Name ?? "Castle Gate", sideBattle ? 34 : 29, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(69, 27, sideBattle ? 360 : 225, 44), dungeon?.Name ?? "성문", sideBattle ? 34 : 29, TextAnchor.MiddleLeft);
 
             var action = new Rect(width - 54, 12, 42, 38);
             float walletWidth = sideBattle ? 190 : 135;
@@ -69,7 +69,7 @@ namespace AFKTrial
             DrawWallet(new Rect(wallet.x + 6, wallet.y + 2, wallet.width - 12, wallet.height - 4));
             if (dungeon != null)
             {
-                if (GUI.Button(new Rect(action.x - 90, action.y, 84, 38), "Retreat", button)) battle.RetreatFromDungeon();
+                if (GUI.Button(new Rect(action.x - 90, action.y, 84, 38), "퇴각", button)) battle.RetreatFromDungeon();
             }
             if (GUI.Button(action, "•••", button)) OpenSystemMenu();
             DrawTimer(sideBattle ? new Rect(wallet.x - 98, 13, 92, 34) : new Rect(width - 112, 55, 100, 33));
@@ -142,7 +142,7 @@ namespace AFKTrial
                 {
                     var level = new Rect(card.x + 4, card.y + 4, 32, 19);
                     Fill(level, new Color32(11, 23, 31, 204));
-                    ArcadeText(level, "Lv." + hero.Level, 11, Parchment, TextAnchor.MiddleCenter);
+                    ArcadeText(level, "레벨 " + hero.Level, 11, Parchment, TextAnchor.MiddleCenter);
                     if (role != TrialData.Role.None)
                         Picture("RoleUI/" + RoleIcons[(int)role - 1], card.xMax - 26, card.y + 4, 21, 21);
                 }
@@ -162,7 +162,7 @@ namespace AFKTrial
             }
         }
 
-        private static readonly string[] BattleDockTitles = { "Heroes", "Formation", "Summon", "Hall" };
+        private static readonly string[] BattleDockTitles = { "영웅", "편성", "소환", "홀" };
 
         private void DrawBattleDock(Rect area)
         {
@@ -192,7 +192,7 @@ namespace AFKTrial
             var accent = remaining > 5 ? HudAmber : enemyAccent;
             DrawCourtEmblem(new Rect(area.x + 6, area.y + 6, 20, 20), 5, accent);
             ArcadeText(new Rect(area.x + 30, area.y, area.width - 35, area.height),
-                remaining.ToString("F1") + "s", 16, Parchment, TextAnchor.MiddleCenter);
+                remaining.ToString("F1") + "초", 16, Parchment, TextAnchor.MiddleCenter);
             Fill(new Rect(area.x, area.yMax - 1, area.width * remaining / battle.Limit, 1), accent);
         }
         private void DrawWallet(Rect area)
@@ -209,8 +209,8 @@ namespace AFKTrial
             var labelArea = new Rect(area.x + size + 3, area.y, area.width - size - 3, area.height);
             string amount = value.ToString("N0");
             if (value >= 1000 && HudText.CalcSize(new GUIContent(amount)).x > labelArea.width)
-                amount = value >= 1000000000 ? (value / 1e9f).ToString("0.#") + "B"
-                    : value >= 1000000 ? (value / 1e6f).ToString("0.#") + "M" : (value / 1000f).ToString("0.#") + "K";
+                amount = value >= 100000000 ? (value / 1e8f).ToString("0.#") + "억"
+                    : value >= 10000 ? (value / 1e4f).ToString("0.#") + "만" : value.ToString("N0");
             GUI.Label(labelArea, amount, HudText);
         }
 
@@ -218,8 +218,8 @@ namespace AFKTrial
         {
             GUI.enabled = battle.Farming;
             int target = battle.Next - 1;
-            string targetName = target < 0 ? "Practice" : (target / battle.Data.RoundLength + 1) + "-" + (target % battle.Data.RoundLength + 1);
-            if (GUI.Button(area, "Retry " + targetName, knightSelectedButton))
+            string targetName = target < 0 ? "연습" : (target / battle.Data.RoundLength + 1) + "-" + (target % battle.Data.RoundLength + 1);
+            if (GUI.Button(area, "재도전 " + targetName, knightSelectedButton))
             {
                 battle.Retry();
                 accumulator = restartDelay = 0;
@@ -232,7 +232,7 @@ namespace AFKTrial
             DrawKnightPanel(area);
             var dungeon = battle.ActiveDungeon;
             bool gold = dungeon.Kind == TrialData.DungeonKind.GoldVault;
-            GUI.Label(new Rect(area.x + 15, area.y, 155, area.height), "Victory reward", HudText);
+            GUI.Label(new Rect(area.x + 15, area.y, 155, area.height), "승리 보상", HudText);
             DrawAmount(new Rect(area.x + 169, area.y, area.width - 184, area.height),
                 gold ? goldCoin : experienceCrystal, gold ? dungeon.Gold : dungeon.Experience);
         }
@@ -250,14 +250,14 @@ namespace AFKTrial
                 int enemies = 0;
                 foreach (var unit in battle.Units)
                     if (!unit.Ally && unit.Alive) enemies++;
-                GUI.Label(content, $"Defeat all enemies   /   {enemies} remaining", HudText);
+                GUI.Label(content, $"모든 적 처치   /   {enemies}명 남음", HudText);
                 return;
             }
             int interval = battle.Data.BossEvery;
             int inCycle = battle.ActiveStage > 0 ? (battle.ActiveStage - 1) % interval + 1 : 0;
             int remaining = interval - inCycle;
-            string objective = battle.BossStage ? "Defeat the boss" : inCycle == 0 ? "Practice battle" :
-                remaining == 1 ? "Boss in 1 stage" : $"Boss in {remaining} stages";
+            string objective = battle.BossStage ? "보스를 처치하세요" : inCycle == 0 ? "연습 전투" :
+                remaining == 1 ? "1단계 후 보스" : $"{remaining}단계 후 보스";
             GUI.DrawTexture(new Rect(content.x, content.center.y - 13, 26, 26), bossMark, ScaleMode.ScaleToFit);
             CourtHeading(new Rect(content.x + 32, content.y, 156, content.height), objective, 17, TextAnchor.MiddleLeft);
             float trackX = content.x + 186;
@@ -282,7 +282,7 @@ namespace AFKTrial
             }
             if (battle.Won)
             {
-                GUI.Label(new Rect(area.x, area.y, 82, area.height), "VICTORY", HudText);
+                GUI.Label(new Rect(area.x, area.y, 82, area.height), "승리", HudText);
                 float cell = (area.width - 82) / (battle.TicketReward > 0 ? 3 : 2);
                 DrawAmount(new Rect(area.x + 82, area.y, cell, area.height), goldCoin, battle.GoldReward);
                 DrawAmount(new Rect(area.x + 82 + cell, area.y, cell, area.height), experienceCrystal, battle.ExperienceReward);
@@ -291,7 +291,7 @@ namespace AFKTrial
                         FeatureTexture("SummonUI/SummonTicket"), battle.TicketReward);
                 return;
             }
-            GUI.Label(area, battle.Result, HudText);
+            GUI.Label(area, battle.ActiveDungeon != null ? "던전 패배: 획득 보상 없음" : battle.ActiveRepeat ? "패배: 같은 스테이지 재도전" : "패배: 낮은 스테이지에서 파밍", HudText);
         }
     }
 }

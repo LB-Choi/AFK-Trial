@@ -33,6 +33,7 @@ namespace AFKTrial.Editor
                 CheckDungeonFirstRewards(NewBattle());
                 CheckDungeonResultSave(NewBattle());
                 TrialSettingsChecks.Check(fixture);
+                TrialBossHistoryChecks.Check(fixture);
                 CheckRepeatStage(NewBattle());
                 CheckOffAxisApproach(NewBattle());
                 for (int enemySlot = 3; enemySlot < 6; enemySlot++)

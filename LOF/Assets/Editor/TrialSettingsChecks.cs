@@ -111,7 +111,7 @@ namespace AFKTrial.Editor
                     Require(!(bool)Call("TryResetProgress") && File.ReadAllText(main) == previousSave && File.Exists(backup),
                         "reset requires exact confirmation and preserves files otherwise");
                 }
-                Set("resetConfirmation", "RESET");
+                Set("resetConfirmation", "초기화");
                 Menu("Settings");
                 Require(!(bool)Call("TryResetProgress"), "confirmation text alone cannot reset outside confirmation screen");
                 Menu("Reset");

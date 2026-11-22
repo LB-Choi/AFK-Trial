@@ -29,7 +29,7 @@ namespace AFKTrial
         private void DrawRepeatStages(int width, int height)
         {
             bool portrait = height > width;
-            if (DrawRosterHeader(width, "Repeat stage", "Knight Hall"))
+            if (DrawRosterHeader(width, "스테이지 반복", "기사단 홀"))
             {
                 choosingRepeat = false;
                 return;
@@ -56,11 +56,11 @@ namespace AFKTrial
             GUI.DrawTextureWithTexCoords(banner, courtyard, new Rect(0, 1 - cropHeight, cropWidth, cropHeight));
             ManuscriptFade(banner, new Color32(10, 19, 32, 111), new Color32(10, 19, 32, 239));
             CourtHeading(new Rect(74, 10, sheetWidth - 148, bannerHeight - 33),
-                "Round " + (repeatPage + 1), portrait ? 40 : 32, TextAnchor.MiddleCenter);
+                "회차 " + (repeatPage + 1), portrait ? 40 : 32, TextAnchor.MiddleCenter);
             int roundBase = repeatPage * length;
             int cleared = Math.Min(length, Math.Max(0, battle.Highest - roundBase));
             ArcadeText(new Rect(70, bannerHeight - 34, sheetWidth - 140, 25),
-                cleared + " / " + length + " stages cleared", 14, Parchment, TextAnchor.MiddleCenter);
+                cleared + " / " + length + " 스테이지 클리어", 14, Parchment, TextAnchor.MiddleCenter);
             CourtRule(new Rect(7, bannerHeight, sheetWidth - 14, 1), FrameGold);
             GUI.enabled = repeatPage > 0;
             bool previous = GUI.Button(new Rect(17, (bannerHeight - 42) * 0.5f, 54, 42), "‹", button);
@@ -71,18 +71,18 @@ namespace AFKTrial
             DrawRepeatGrid(new Rect(15, gridTop, sheetWidth - 30, gridHeight), rowHeight, roundBase, length);
 
             CourtRule(new Rect(17, summaryTop, sheetWidth - 34, 1), FrameGold);
-            string target = battle.RepeatStage == 0 ? "Off" : battle.StageName(battle.RepeatStage);
+            string target = battle.RepeatStage == 0 ? "꺼짐" : StageLabel(battle.RepeatStage);
             ArcadeText(new Rect(17, summaryTop + 4, sheetWidth - 34, 25),
-                "Current repeat   /   " + target, 15, Parchment, TextAnchor.MiddleLeft);
-            string hint = battle.Highest == 0 ? "Clear a stage to unlock it for repeat."
-                : selectedRepeat > 0 ? "Selected: " + battle.StageName(selectedRepeat) + "   ·   Applies next battle"
-                : "Select a cleared stage.";
+                "현재 반복   /   " + target, 15, Parchment, TextAnchor.MiddleLeft);
+            string hint = battle.Highest == 0 ? "스테이지를 클리어하면 반복할 수 있습니다."
+                : selectedRepeat > 0 ? "선택: " + StageLabel(selectedRepeat) + "   ·   다음 전투부터 적용"
+                : "클리어한 스테이지를 선택하세요.";
             GUI.Label(new Rect(17, summaryTop + 30, sheetWidth - 34, 29), idleSaveError ?? hint, small);
             GUI.enabled = battle.RepeatStage > 0;
-            if (GUI.Button(new Rect(16, summaryTop + 62, 156, 43), "Stop repeating", button)) SaveRepeatStage(0);
+            if (GUI.Button(new Rect(16, summaryTop + 62, 156, 43), "반복 중지", button)) SaveRepeatStage(0);
             GUI.enabled = selectedRepeat > roundBase && selectedRepeat <= battle.Highest &&
                 (long)selectedRepeat <= (long)roundBase + length && selectedRepeat != battle.RepeatStage;
-            if (GUI.Button(new Rect(sheetWidth - 174, summaryTop + 62, 158, 43), "Set repeat", knightSelectedButton))
+            if (GUI.Button(new Rect(sheetWidth - 174, summaryTop + 62, 158, 43), "반복 설정", knightSelectedButton))
                 SaveRepeatStage(selectedRepeat);
             GUI.enabled = true;
             GUI.EndGroup();
@@ -139,7 +139,7 @@ namespace AFKTrial
             if (cleared) CourtHeading(numeral, number, 26, TextAnchor.MiddleCenter);
             else ArcadeText(numeral, number, 21, new Color32(161, 168, 177, 255), TextAnchor.MiddleCenter);
             if (boss) GUI.DrawTexture(new Rect(tile.xMax - 23, tile.y + 3, 19, 19), bossMark, ScaleMode.ScaleToFit);
-            string state = !cleared ? "Locked" : stage == battle.RepeatStage ? "Repeating" : boss ? "Boss" : "Cleared";
+            string state = !cleared ? "잠김" : stage == battle.RepeatStage ? "반복 중" : boss ? "보스" : "클리어";
             ArcadeText(new Rect(tile.x, tile.center.y + 6, tile.width, 20), state,
                 12, cleared ? FrameLight : new Color32(164, 173, 186, 255), TextAnchor.MiddleCenter);
             if (selected) CourtRule(new Rect(tile.x + 9, tile.yMax - 4, tile.width - 18, 1), gold);

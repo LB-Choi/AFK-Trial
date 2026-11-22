@@ -8,7 +8,7 @@ namespace AFKTrial
     public sealed partial class TrialRunner
     {
         private readonly Dictionary<string, Texture2D> featureTextures = new Dictionary<string, Texture2D>();
-        private static readonly string[] FeatureTabs = { "Formation", "Summon", "Gear", "Dungeons", "Idle" };
+        private static readonly string[] FeatureTabs = { "편성", "소환", "장비", "던전", "방치 보상" };
         private static readonly string[] RoleIcons = { "AttackRole", "DefenseRole", "SupportRole" };
 
         private static readonly string[] Equipment = { "MightSigil", "WardSigil", "LifeSigil" };
@@ -19,7 +19,7 @@ namespace AFKTrial
         private readonly List<TrialBattle.Item> visibleGear = new List<TrialBattle.Item>();
         private static readonly Color InventoryGold = new Color(0.77f, 0.54f, 0.25f);
         private static readonly Color InventoryPanel = new Color(0.065f, 0.103f, 0.15f);
-        private static readonly string[] GearFilters = { "All", "Weapons", "Armor", "Necklaces" };
+        private static readonly string[] GearFilters = { "전체", "무기", "갑옷", "목걸이" };
         private int featurePage = -1, featureHero;
         private TrialData.DungeonKind? selectedDungeon;
         private int dungeonDifficulty;
@@ -63,7 +63,7 @@ namespace AFKTrial
         }
 
         private static readonly string[] PageTitles =
-            { "Formation", "Oath chamber", "Equipment inventory", "Dungeon gates", "Idle rewards" };
+            { "편성", "소환의 방", "장비 가방", "던전 입구", "방치 보상" };
         private static readonly Color HallInk = new Color32(19, 25, 40, 246);
         private static readonly Color HallLine = new Color32(123, 111, 88, 255);
         private static readonly Color HallAmber = new Color32(228, 198, 143, 255);
@@ -143,7 +143,7 @@ namespace AFKTrial
 
         private void DrawRosterCount(Rect area)
         {
-            GUI.Label(area, OwnedCount() + " / " + portraits.Length + " owned", HudCentered);
+            GUI.Label(area, OwnedCount() + " / " + portraits.Length + "개 보유", HudCentered);
         }
 
         private void DrawMenu(int width, int height)
@@ -163,12 +163,12 @@ namespace AFKTrial
                 new Color32(10, 15, 28, 238), new Color32(10, 15, 28, 0));
             var heading = new Rect(18, 13, portrait ? 250 : 317, 67);
             Picture("KnightUI/OrderSeal", heading.x, heading.y + 3, 47, 47);
-            ArcadeText(new Rect(74, 12, 200, 18), battle.StageName(battle.ActiveStage), 12, HallAmber, TextAnchor.MiddleLeft);
-            CourtHeading(new Rect(72, 28, 233, 44), "Knight Hall", 34, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(74, 12, 200, 18), StageLabel(battle.ActiveStage), 12, HallAmber, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(72, 28, 233, 44), "기사단 홀", 34, TextAnchor.MiddleLeft);
             var wallet = new Rect(width - (portrait ? 205 : 240), 13, portrait ? 190 : 222, 37);
             DrawKnightPanel(wallet);
             DrawWallet(new Rect(wallet.x + 9, wallet.y + 2, wallet.width - 14, 33));
-            if (GUI.Button(new Rect(width - 142, 62, 124, 36), "Settings", button)) OpenSystemMenu();
+            if (GUI.Button(new Rect(width - 142, 62, 124, 36), "설정", button)) OpenSystemMenu();
 
             int featured = battle.HeroAt(1) >= 0 ? battle.HeroAt(1) : battle.FirstDeployedHero;
             var hero = battle.Data.Heroes[featured];
@@ -177,7 +177,7 @@ namespace AFKTrial
             var nameplate = new Rect(21, dockTop - 86, portrait ? 288 : 337, 78);
             CourtRule(new Rect(nameplate.x, nameplate.y + 3, 63, 1), HallAmber);
             ArcadeText(new Rect(nameplate.x, nameplate.y + 10, nameplate.width, 19),
-                hero.Role.ToString().ToUpperInvariant() + "    /    LV. " + battle.HeroLevel(featured), 12, HallAmber, TextAnchor.MiddleLeft);
+                RoleKorean(hero.Role) + "    /    레벨 " + battle.HeroLevel(featured), 12, HallAmber, TextAnchor.MiddleLeft);
             CourtHeading(new Rect(nameplate.x - 1, nameplate.y + 28, nameplate.width, 47), hero.Name,
                 portrait ? 33 : 39, TextAnchor.MiddleLeft);
             if (GUI.Button(nameplate, GUIContent.none, GUIStyle.none))
@@ -188,9 +188,12 @@ namespace AFKTrial
                 heroView = HeroView.Info;
             }
             var resume = new Rect(width - 190, dockTop - 64, 169, 47);
+            GUI.enabled = battle.BossHistory.Length > 0;
+            if (GUI.Button(new Rect(resume.x, resume.y - 92, resume.width, 36), "보스 도전 기록", button)) OpenBossHistory(battle.BossHistory.Length - 1);
+            GUI.enabled = true;
             if (GUI.Button(new Rect(resume.x, resume.y - 48, resume.width, 38),
-                battle.RepeatStage == 0 ? "Repeat stage" : "Repeat stage  /  ON", button)) OpenRepeatStages();
-            if (GUI.Button(resume, "Back to battle   ›", knightSelectedButton))
+                battle.RepeatStage == 0 ? "스테이지 반복" : "스테이지 반복 / 켜짐", button)) OpenRepeatStages();
+            if (GUI.Button(resume, "전투로 돌아가기   ›", knightSelectedButton))
                 editing = false;
             DrawHallDock(width, height, -1);
         }
@@ -232,7 +235,7 @@ namespace AFKTrial
                 float size = portrait ? 33 : 29;
                 DrawCourtEmblem(new Rect(cell.center.x - size / 2, top + (portrait ? 12 : 7), size, size),
                     i, selected || hover ? new Color32(255, 226, 174, 255) : new Color32(202, 187, 155, 255));
-                string caption = i == 0 ? "Heroes" : FeatureTabs[i - 1];
+                string caption = i == 0 ? "영웅" : FeatureTabs[i - 1];
                 var captionRect = new Rect(cell.x, top + (portrait ? 48 : 37), step, 22);
                 ArcadeText(captionRect, caption, 14, selected ? HallLight : new Color32(215, 213, 208, 255), TextAnchor.MiddleCenter);
                 if (!pressed || selected) continue;
@@ -252,15 +255,15 @@ namespace AFKTrial
             string icon;
             switch (role)
             {
-                case TrialData.Role.Attack: icon = "Onslaught"; effect = "ATK +10%"; break;
-                case TrialData.Role.Defense: icon = "Guard"; effect = "Damage taken -10%"; break;
-                case TrialData.Role.Support: icon = "Empowerment"; effect = "ATK and max HP +5%"; break;
+                case TrialData.Role.Attack: icon = "Onslaught"; effect = "공격력 +10%"; break;
+                case TrialData.Role.Defense: icon = "Guard"; effect = "받는 피해 -10%"; break;
+                case TrialData.Role.Support: icon = "Empowerment"; effect = "공격력·최대 체력 +5%"; break;
                 default:
-                    GUI.Label(new Rect(x, y, 490, 34), heading + " synergy: None", label);
+                    GUI.Label(new Rect(x, y, 490, 34), heading + " 시너지: 없음", label);
                     return;
             }
             Picture("SynergyUI/" + icon, x, y, 32, 32);
-            GUI.Label(new Rect(x + 40, y, 460, 34), heading + ": " + icon + "  /  " + effect, small);
+            GUI.Label(new Rect(x + 40, y, 460, 34), heading + ": " + SynergyKorean(role) + "  /  " + effect, small);
         }
         private void DrawFeatureScreen(int width, int height)
         {
@@ -271,7 +274,7 @@ namespace AFKTrial
             ManuscriptFade(new Rect(0, 0, width, headerHeight), new Color32(40, 40, 50, 255), HallInk);
             CourtRule(new Rect(0, headerHeight - 1, width, 1), HallLine);
             var back = new Rect(10, 4, 118, 43);
-            ArcadeText(back, heroView == HeroView.Info ? "‹   Hero info" : "‹   Hall", 16, HallAmber, TextAnchor.MiddleCenter);
+            ArcadeText(back, heroView == HeroView.Info ? "‹   영웅 정보" : "‹   홀", 16, HallAmber, TextAnchor.MiddleCenter);
             if (GUI.Button(back, GUIContent.none, GUIStyle.none))
             {
                 featurePage = -1;
@@ -317,11 +320,11 @@ namespace AFKTrial
             var info = new Rect(illustration.x + 8, backdrop.yMax - 84, illustration.width - 16, 80);
             Fill(new Rect(info.center.x - 61, info.y + 1, 122, 18), new Color32(13, 19, 32, 197));
             ArcadeText(new Rect(info.x, info.y, info.width, 20),
-                hero.Role.ToString().ToUpperInvariant() + "    /    LV. " + level, 12, HallAmber, TextAnchor.MiddleCenter);
+                RoleKorean(hero.Role) + "    /    레벨 " + level, 12, HallAmber, TextAnchor.MiddleCenter);
             CourtHeading(new Rect(info.x, info.y + 18, info.width, 36), hero.Name, tall ? 30 : 28, TextAnchor.MiddleCenter);
             var stats = battle.HeroStats(featureHero);
             ArcadeText(new Rect(info.x, info.y + 55, info.width, 18),
-                $"HP {stats.hp:0.##}     ATK {stats.attack:0.##}     DEF {stats.armor}", 14, HallLight, TextAnchor.MiddleCenter);
+                $"체력 {stats.hp:0.##}   공격 {stats.attack:0.##}   방어 {stats.armor}", 14, HallLight, TextAnchor.MiddleCenter);
 
             if (tall) Fill(new Rect(0, listTop, width, growthTop - listTop), HallInk);
             if (!tall)
@@ -332,12 +335,12 @@ namespace AFKTrial
             }
             float rowHeight = tall ? 55 : 67;
             float rowTop = listTop + (tall ? 38 : 49);
-            CourtHeading(new Rect(skillX + 3, listTop + 4, column, 33), "Skills", 21, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(skillX + 3, listTop + 4, column, 33), "스킬", 21, TextAnchor.MiddleLeft);
             string prefix = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(hero.Id.Replace('_', ' ')).Replace(" ", "");
             for (int i = 0; i < 3; i++)
             {
                 var row = new Rect(skillX, rowTop + i * rowHeight, column, rowHeight);
-                if (DrawDossierRow(row, "SkillUI/" + prefix + "Skill" + (i + 1), "Lv. " + battle.SkillLevel(featureHero, i),
+                if (DrawDossierRow(row, "SkillUI/" + prefix + "Skill" + (i + 1), "레벨 " + battle.SkillLevel(featureHero, i),
                     battle.Data.Skills[featureHero, i].Name, i == selectedSkill))
                 {
                     selectedSkill = i;
@@ -355,14 +358,14 @@ namespace AFKTrial
                 return;
             }
 
-            CourtHeading(new Rect(17, listTop + 4, column, 33), "Equipment", 21, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(17, listTop + 4, column, 33), "장비", 21, TextAnchor.MiddleLeft);
             for (int i = 0; i < Equipment.Length; i++)
             {
                 var slot = (TrialData.GearSlot)i;
                 var item = battle.Equipped(featureHero, slot);
                 var row = new Rect(14, rowTop + i * rowHeight, column, rowHeight);
                 if (DrawDossierRow(row, item == null ? "EquipmentUI/" + Equipment[i] : GearIcon(item),
-                    slot.ToString(), item == null ? "Empty" : $"{item.Gear.Name} +{item.Enhancement}", false))
+                    GearSlotKorean(slot), item == null ? "없음" : $"{GearNameKorean(item.Gear.Name)} +{item.Enhancement}", false))
                 {
                     gearSlot = slot;
                     inventoryPage = -1;
@@ -394,27 +397,27 @@ namespace AFKTrial
             bool hasNext = level > 0 && level < int.MaxValue;
             var next = hasNext ? battle.HeroStats(featureHero, level + 1) : current;
             float statWidth = (width - 30) / 3;
-            DrawGrowthStat(new Rect(15, top + 5, statWidth, 45), "HP", current.hp, next.hp, hasNext);
-            DrawGrowthStat(new Rect(15 + statWidth, top + 5, statWidth, 45), "ATK", current.attack, next.attack, hasNext);
-            DrawGrowthStat(new Rect(15 + statWidth * 2, top + 5, statWidth, 45), "DEF", current.armor, next.armor, hasNext);
+            DrawGrowthStat(new Rect(15, top + 5, statWidth, 45), "체력", current.hp, next.hp, hasNext);
+            DrawGrowthStat(new Rect(15 + statWidth, top + 5, statWidth, 45), "공격력", current.attack, next.attack, hasNext);
+            DrawGrowthStat(new Rect(15 + statWidth * 2, top + 5, statWidth, 45), "방어력", current.armor, next.armor, hasNext);
             float actionWidth = width > 600 ? 178 : 149;
             float actionX = width - 14 - actionWidth;
             float cell = (actionX - 28) * 0.5f;
-            DrawLevelResource(new Rect(15, top + 54, cell, 70), goldCoin, "Gold", cost.gold, battle.Gold);
-            DrawLevelResource(new Rect(15 + cell, top + 54, cell, 70), experienceCrystal, "Experience", cost.experience, battle.Experience);
+            DrawLevelResource(new Rect(15, top + 54, cell, 70), goldCoin, "골드", cost.gold, battle.Gold);
+            DrawLevelResource(new Rect(15 + cell, top + 54, cell, 70), experienceCrystal, "경험치", cost.experience, battle.Experience);
             GUI.enabled = battle.CanUpgradeHero(featureHero);
-            if (GUI.Button(new Rect(actionX, top + 59, actionWidth, 40), level == int.MaxValue ? "Maximum level" : $"Level up to {level + 1}", knightSelectedButton))
+            if (GUI.Button(new Rect(actionX, top + 59, actionWidth, 40), level == int.MaxValue ? "최대 강화" : $"{level + 1}레벨로 성장", knightSelectedButton))
                 TryPurchaseHeroLevel(featureHero);
             GUI.enabled = true;
             GUI.Label(new Rect(15, top + 127, width - 30, 22),
-                string.IsNullOrEmpty(idleSaveError) ? "Equipped gear + synergy included. Applies next battle." : idleSaveError, small);
+                string.IsNullOrEmpty(idleSaveError) ? "장착 장비·시너지 포함 수치입니다. 변경된 효과는 다음 전투부터 적용됩니다." : "저장 실패: 저장 공간을 확인한 후 다시 시도해 주세요.", small);
         }
 
         private void DrawGrowthStat(Rect area, string name, float current, float next, bool hasNext)
         {
-            ArcadeText(new Rect(area.x, area.y, area.width, 18), name + "   Current → After", 12, BodyInk, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(area.x, area.y, area.width, 18), name + "   현재 → 강화 후", 12, BodyInk, TextAnchor.MiddleLeft);
             string value = current.ToString("0.##", CultureInfo.InvariantCulture) + (hasNext
-                ? " → " + next.ToString("0.##", CultureInfo.InvariantCulture) : "  /  MAX");
+                ? " → " + next.ToString("0.##", CultureInfo.InvariantCulture) : "  /  최대");
             ArcadeText(new Rect(area.x, area.y + 19, area.width - 5, 25), value, 18, HallAmber, TextAnchor.MiddleLeft);
         }
 
@@ -422,9 +425,9 @@ namespace AFKTrial
         {
             GUI.DrawTexture(new Rect(area.x, area.y + 4, 24, 24), icon, ScaleMode.ScaleToFit);
             ArcadeText(new Rect(area.x + 28, area.y + 2, area.width - 29, 25), name, 15, HallLight, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(area.x + 2, area.y + 29, area.width - 2, 20), $"Cost   {cost:N0}", 15,
+            ArcadeText(new Rect(area.x + 2, area.y + 29, area.width - 2, 20), $"필요   {cost:N0}", 15,
                 owned < cost ? new Color32(239, 169, 144, 255) : HallAmber, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(area.x + 2, area.y + 49, area.width - 2, 19), $"Owned   {owned:N0}", 13, HallLight, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(area.x + 2, area.y + 49, area.width - 2, 19), $"보유   {owned:N0}", 13, HallLight, TextAnchor.MiddleLeft);
         }
         private void DrawSkillDetails(float width)
         {
@@ -434,15 +437,15 @@ namespace AFKTrial
             var panel = new Rect(0, 0, width, 392);
             InventoryBox(panel, InventoryPanel, InventoryGold);
             GUI.Label(new Rect(16, 13, width - 68, 31), skill.Name, label);
-            if (GUI.Button(new Rect(width - 47, 12, 32, 30), "X", button)) selectedSkill = -1;
-            string trigger = slot == 0 ? "Every " + skill.Interval + " basic attacks" : "Every " + skill.Interval + "s";
+            if (GUI.Button(new Rect(width - 66, 12, 50, 30), "닫기", button)) selectedSkill = -1;
+            string trigger = slot == 0 ? "기본 공격 " + skill.Interval + "회마다 발동" : skill.Interval + "초마다 발동";
             ArcadeText(new Rect(16, 49, width - 32, 23), trigger, 14, BodyInk, TextAnchor.MiddleLeft);
             bool hasNext = level > 0 && level < int.MaxValue;
             var current = battle.SkillPreview(featureHero, slot, Math.Max(1, level));
             var next = hasNext ? battle.SkillPreview(featureHero, slot, level + 1) : current;
             float valueX = width * .44f, valueWidth = (width - valueX - 16) / 2;
-            ArcadeText(new Rect(valueX, 81, valueWidth, 23), "Current Lv." + level, 14, BodyInk, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(valueX + valueWidth, 81, valueWidth, 23), hasNext ? "After Lv." + (level + 1) : "MAX", 14, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(valueX, 81, valueWidth, 23), "현재 레벨 " + level, 14, BodyInk, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(valueX + valueWidth, 81, valueWidth, 23), hasNext ? "강화 후 레벨 " + (level + 1) : "최대", 14, HallAmber, TextAnchor.MiddleLeft);
             bool unchanged = true;
             for (int i = 0; i < current.Count; i++)
             {
@@ -453,22 +456,22 @@ namespace AFKTrial
                 ArcadeText(new Rect(valueX + valueWidth, y, valueWidth - 5, 28), hasNext ? next[i].value : "—", 14, HallAmber, TextAnchor.MiddleLeft);
                 unchanged &= current[i].value == next[i].value;
             }
-            string details = (hasNext && unchanged ? "No effect change at the next level.\n" : "") +
+            string details = (hasNext && unchanged ? "다음 레벨에서도 효과는 동일합니다.\n" : "") +
                 System.Text.RegularExpressions.Regex.Replace(skill.Description ?? "", @"\bn\b", level.ToString(CultureInfo.InvariantCulture)) +
-                "\nValues before battle modifiers. HP effects use HP at cast; healing is capped.";
+                "\n전투 보정 전 수치입니다. 체력 효과는 발동 시점 기준이며 최대 체력을 초과하여 회복하지 않습니다.";
             float detailWidth = width - 49;
             float detailHeight = Mathf.Max(54, small.CalcHeight(new GUIContent(details), detailWidth));
             skillScroll = GUI.BeginScrollView(new Rect(16, 218, width - 32, 54), skillScroll, new Rect(0, 0, detailWidth, detailHeight));
             GUI.Label(new Rect(0, 0, detailWidth, detailHeight), details, small);
             GUI.EndScrollView();
             long cost = battle.SkillCost(featureHero, slot);
-            string status = level == int.MaxValue ? "Maximum level" : level >= battle.HeroLevel(featureHero)
-                ? $"Requires hero Lv.{level + 1}" : $"Gold {battle.Gold} / {cost}";
-            GUI.Label(new Rect(16, 277, width - 32, 34), idleSaveError ?? status, small);
+            string status = level == int.MaxValue ? "최대 강화" : level >= battle.HeroLevel(featureHero)
+                ? $"영웅 {level + 1}레벨 이상 필요" : $"보유 골드 {battle.Gold:N0} / 필요 {cost:N0}";
+            GUI.Label(new Rect(16, 277, width - 32, 34), idleSaveError == null ? status : "저장 실패: 저장 공간을 확인한 후 다시 시도해 주세요.", small);
             GUI.enabled = battle.CanTrain(featureHero, slot);
-            if (GUI.Button(new Rect(16, 316, width - 32, 40), $"Upgrade  /  {cost:N0} G", button)) TryTrainSkill(featureHero, slot);
+            if (GUI.Button(new Rect(16, 316, width - 32, 40), $"강화  /  {cost:N0} 골드", button)) TryTrainSkill(featureHero, slot);
             GUI.enabled = true;
-            ArcadeText(new Rect(16, 361, width - 32, 25), "Changes apply from the next battle.", 14, HallAmber, TextAnchor.MiddleCenter);
+            ArcadeText(new Rect(16, 361, width - 32, 25), "변경된 효과는 다음 전투부터 적용됩니다.", 14, HallAmber, TextAnchor.MiddleCenter);
         }
         private bool showSynergyEffects;
         private void OpenFeature(int page)
@@ -485,8 +488,8 @@ namespace AFKTrial
         {
             if (showSynergyEffects)
             {
-                GUI.Label(new Rect(20, 65, 300, 42), "Synergy effects", title);
-                if (GUI.Button(new Rect(width - 156, 65, 136, 42), "Back to slots", button)) showSynergyEffects = false;
+                GUI.Label(new Rect(20, 65, 300, 42), "시너지 효과", title);
+                if (GUI.Button(new Rect(width - 156, 65, 136, 42), "편성으로", button)) showSynergyEffects = false;
                 var preview = battle.FormationSynergy(draft);
                 for (int i = 0; i < RoleIcons.Length; i++)
                 {
@@ -494,18 +497,18 @@ namespace AFKTrial
                     float y = 126 + i * 99;
                     ArcadePanel(new Rect(16, y - 6, width - 32, 89), HallInk, preview == role ? HallAmber : HallLine);
                     Picture("RoleUI/" + RoleIcons[i], 26, y + 11, 39, 39);
-                    string state = battle.ActiveSynergy == role ? "Active now" : "Inactive";
-                    GUI.Label(new Rect(72, y, width - 90, 34), $"2 {role} heroes  /  {state}", label);
-                    DrawSynergyLine(72, y + 36, preview == role ? "Selected team" : "Effect", role);
+                    string state = battle.ActiveSynergy == role ? "적용 중" : "미적용";
+                    GUI.Label(new Rect(72, y, width - 90, 34), $"{RoleKorean(role)} 영웅 2명  /  {state}", label);
+                    DrawSynergyLine(72, y + 36, preview == role ? "선택한 편성" : "효과", role);
                 }
                 return;
             }
-            if (GUI.Button(new Rect(width - 168, 56, 148, 38), "Synergy effects")) showSynergyEffects = true;
+            if (GUI.Button(new Rect(width - 168, 56, 148, 38), "시너지 효과")) showSynergyEffects = true;
             int deployed = System.Array.FindAll(draft, hero => hero >= 0).Length;
-            ArcadeText(new Rect(20, 54, width - 340, 20), $"Deployed {deployed}/3   ·   Select a slot, then a hero", 13, HallLight, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(20, 75, width - 190, 21), "Center front row deals and takes 20% more damage.", 14, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(20, 54, width - 340, 20), $"출전 {deployed}/3   ·   슬롯 선택 후 영웅 선택", 13, HallLight, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(20, 75, width - 190, 21), "중앙 전열은 주는 피해와 받는 피해가 20% 증가합니다.", 14, HallAmber, TextAnchor.MiddleLeft);
             GUI.enabled = deployed > 1 && draft[selectedSlot] >= 0;
-            if (GUI.Button(new Rect(width - 310, 56, 132, 38), "Remove hero")) draft[selectedSlot] = -1;
+            if (GUI.Button(new Rect(width - 310, 56, 132, 38), "편성 해제")) draft[selectedSlot] = -1;
             GUI.enabled = true;
             float boardWidth = Mathf.Min(width - 40, 660);
             var board = new Rect((width - boardWidth) / 2, 100, boardWidth, 108);
@@ -522,9 +525,9 @@ namespace AFKTrial
                     DrawKnightPortrait(new Rect(rect.x + 1, rect.y + 2, 61, rect.height - 4), draft[i], Color.white);
                 GUI.DrawTexture(new Rect(rect.x + 3, rect.y + (width > 540 ? 27 : 13), 23, 23), deploymentBadges[i], ScaleMode.ScaleToFit);
                 ArcadeText(new Rect(textX, rect.y + 5, rect.xMax - textX - 3, 16),
-                    i == 1 ? "FRONT" : i == 2 ? "UPPER REAR" : "LOWER REAR", 11, HallAmber, TextAnchor.MiddleLeft);
+                    i == 1 ? "전열" : i == 2 ? "위쪽 후열" : "아래쪽 후열", 11, HallAmber, TextAnchor.MiddleLeft);
                 ArcadeText(new Rect(textX, rect.y + 20, rect.xMax - textX - 3, 26),
-                    draft[i] >= 0 ? battle.Heroes[draft[i]] : "Empty", width > 540 ? 17 : 14, HallLight, TextAnchor.MiddleLeft);
+                    draft[i] >= 0 ? battle.Heroes[draft[i]] : "없음", width > 540 ? 17 : 14, HallLight, TextAnchor.MiddleLeft);
                 changed |= draft[i] != battle.HeroAt(i);
             }
             bool wide = width > 540;
@@ -532,10 +535,10 @@ namespace AFKTrial
             DrawHeroGrid(width, 216, height - 216 - footerHeight, true);
             ManuscriptFade(new Rect(0, height - footerHeight, width, footerHeight),
                 new Color32(31, 35, 50, 240), HallInk);
-            DrawSynergyLine(20, height - footerHeight + 2, "Active", battle.ActiveSynergy);
-            if (changed || battle.FormationSynergy(draft) != battle.ActiveSynergy) DrawSynergyLine(20, height - footerHeight + 31, "Next battle", battle.FormationSynergy(draft));
+            DrawSynergyLine(20, height - footerHeight + 2, "현재", battle.ActiveSynergy);
+            if (changed || battle.FormationSynergy(draft) != battle.ActiveSynergy) DrawSynergyLine(20, height - footerHeight + 31, "다음 전투", battle.FormationSynergy(draft));
             GUI.enabled = changed;
-            if (GUI.Button(new Rect(width - 245, height - (wide ? 54 : 42), 225, 41), "Apply next battle", knightSelectedButton))
+            if (GUI.Button(new Rect(width - 245, height - (wide ? 54 : 42), 225, 41), "다음 전투에 적용", knightSelectedButton))
                 ConfirmFormation();
             GUI.enabled = true;
         }
@@ -554,9 +557,9 @@ namespace AFKTrial
                 ManuscriptFade(new Rect(0, art.yMax - 148, width, 148), new Color32(14, 17, 29, 0), HallInk);
                 CourtRule(new Rect(23, caption.y + 8, 69, 1), HallAmber);
                 CourtHeading(new Rect(21, caption.y + 13, caption.width - 34, 43),
-                    "Knight’s Oath", 34, TextAnchor.MiddleLeft);
+                    "기사의 맹세", 34, TextAnchor.MiddleLeft);
                 GUI.Label(new Rect(23, caption.y + 53, caption.width - 40, 45),
-                    "One ticket calls one hero. A duplicate grants that hero one level.", small);
+                    "소환권 1장으로 영웅 1명을 소환합니다. 중복 영웅은 레벨이 1 오릅니다.", small);
             }
             else
             {
@@ -583,7 +586,7 @@ namespace AFKTrial
                     Fill(new Rect(footer.x, footer.y, footer.width, 1), InventoryGold);
                     GUI.Label(new Rect(footer.x, footer.y + 3, footer.width, 21), battle.Heroes[pull.Hero], summonName);
                     GUI.Label(new Rect(footer.x, footer.y + 24, footer.width, 17),
-                        pull.IsNew ? "New!" : "+1   Lv." + pull.Level, summonLevel);
+                        pull.IsNew ? "신규 영입!" : "레벨 +1 / 현재 " + pull.Level, summonLevel);
                 }
             }
             if (!string.IsNullOrEmpty(idleSaveError))
@@ -594,7 +597,7 @@ namespace AFKTrial
             }
             float ticketY = art.yMax + (portraitLayout ? 5 : 17);
             Picture("SummonUI/SummonTicket", 18, ticketY, 30, 30);
-            GUI.Label(new Rect(54, ticketY - 2, 190, 34), "Tickets   " + battle.Tickets, label);
+            GUI.Label(new Rect(54, ticketY - 2, 190, 34), "소환권   " + battle.Tickets, label);
             float buttonWidth = portraitLayout ? (width - 48) / 2 : 174;
             float buttonX = width - 18 - 2 * buttonWidth - 12;
             float buttonY = art.yMax + (portraitLayout ? 40 : 11);
@@ -604,7 +607,7 @@ namespace AFKTrial
         private void DrawPullButton(Rect rect, int count)
         {
             GUI.enabled = battle.Tickets >= count;
-            if (GUI.Button(rect, "Summon x" + count, count == 10 ? knightSelectedButton : button))
+            if (GUI.Button(rect, "소환 ×" + count, count == 10 ? knightSelectedButton : button))
                 TrySummon(count);
             GUI.enabled = true;
         }
@@ -626,11 +629,11 @@ namespace AFKTrial
                 : new Rect(16, catalog.yMax + 12, width - 32, height - catalog.yMax - 25);
 
             CourtHeading(new Rect(catalog.x, catalog.y, catalog.width - 123, 36),
-                picking ? "Choose " + gearSlot.ToString().ToLowerInvariant() : "Collection", 25, TextAnchor.MiddleLeft);
+                picking ? GearSlotKorean(gearSlot) + " 선택" : "장비 목록", 25, TextAnchor.MiddleLeft);
             if (picking || !wide)
                 DrawAmount(new Rect(catalog.xMax - 114, catalog.y + 2, 110, 31), goldCoin, battle.Gold);
             else
-                ArcadeText(new Rect(catalog.xMax - 126, catalog.y, 126, 36), battle.Inventory.Count + " owned",
+                ArcadeText(new Rect(catalog.xMax - 126, catalog.y, 126, 36), battle.Inventory.Count + "개 보유",
                     14, HallAmber, TextAnchor.MiddleRight);
 
             int filter = picking ? (int)gearSlot : gearFilter;
@@ -639,7 +642,7 @@ namespace AFKTrial
             {
                 var equipped = battle.Equipped(featureHero, gearSlot);
                 CourtRule(new Rect(tabs.x, tabs.y, tabs.width, 1), HallLine);
-                ArcadeText(tabs, "Equipped   ·   " + (equipped == null ? "Empty" : equipped.Gear.Name + "  +" + equipped.Enhancement),
+                ArcadeText(tabs, "장착 중   ·   " + (equipped == null ? "없음" : GearNameKorean(equipped.Gear.Name) + "  +" + equipped.Enhancement),
                     15, HallLight, TextAnchor.MiddleLeft);
             }
             else
@@ -706,7 +709,7 @@ namespace AFKTrial
             }
             if (selectedGear == null)
             {
-                ArcadeText(new Rect(catalog.x, gridTop, catalog.width, 88), "No equipment in this category.",
+                ArcadeText(new Rect(catalog.x, gridTop, catalog.width, 88), "해당 분류에 장비가 없습니다.",
                     16, HallLight, TextAnchor.MiddleCenter);
                 return;
             }
@@ -735,16 +738,16 @@ namespace AFKTrial
                 ArcadeText(new Rect(card.x + 7, card.y + 2, 60, 22), "+" + item.Enhancement, 12, HallAmber, TextAnchor.MiddleLeft);
             if (item.Owner >= 0)
                 DrawCourtEmblem(new Rect(card.xMax - 26, card.y + 5, 19, 19), 0, HallAmber);
-            ArcadeText(new Rect(card.x + 3, card.yMax - 29, card.width - 6, 26), item.Gear.Name, 16, GearInk(item.Gear.Rarity), TextAnchor.MiddleCenter);
+            ArcadeText(new Rect(card.x + 3, card.yMax - 29, card.width - 6, 26), GearNameKorean(item.Gear.Name), 16, GearInk(item.Gear.Rarity), TextAnchor.MiddleCenter);
             if (selected) CourtGem(new Vector2(card.center.x, card.y + 1), 5, HallAmber);
-            return GUI.Button(card, new GUIContent("", item.Gear.Name), GUIStyle.none);
+            return GUI.Button(card, new GUIContent("", GearNameKorean(item.Gear.Name)), GUIStyle.none);
         }
 
         private void DrawGearProfile(Rect panel, bool picking)
         {
             var item = selectedGear;
             var gear = item.Gear;
-            string stat = gear.Slot == TrialData.GearSlot.Weapon ? "ATK" : gear.Slot == TrialData.GearSlot.Armor ? "DEF" : "HP";
+            string stat = gear.Slot == TrialData.GearSlot.Weapon ? "공격력" : gear.Slot == TrialData.GearSlot.Armor ? "방어력" : "체력";
             bool capped = item.Enhancement >= battle.EnhancementLimit || item.Bonus == int.MaxValue;
             GUI.BeginGroup(panel);
             var area = new Rect(0, 0, panel.width, panel.height);
@@ -761,33 +764,33 @@ namespace AFKTrial
             GUI.DrawTexture(new Rect(art.center.x - iconSize * 0.55f, art.center.y - iconSize * 0.55f,
                 iconSize * 1.1f, iconSize * 1.1f), coatMedallion, ScaleMode.ScaleToFit);
             Picture(GearIcon(item), art.center.x - iconSize * 0.42f, art.center.y - iconSize * 0.42f, iconSize * 0.84f, iconSize * 0.84f);
-            ArcadeText(new Rect(15, 6, area.width - 30, 24), (gear.Rarity + "   ·   " + gear.Slot).ToUpperInvariant(),
+            ArcadeText(new Rect(15, 6, area.width - 30, 24), GearRarityKorean(gear.Rarity) + "   ·   " + GearSlotKorean(gear.Slot),
                 12, GearInk(gear.Rarity), TextAnchor.MiddleLeft);
             ManuscriptFade(new Rect(0, artHeight, area.width, 212), new Color32(35, 40, 52, 255), HallInk);
             CourtRule(new Rect(0, artHeight, area.width, 1), FrameGold);
             float x = 16, y = artHeight + 8;
-            ArcadeText(new Rect(x, y, area.width - 32, 35), gear.Name + "  +" + item.Enhancement,
+            ArcadeText(new Rect(x, y, area.width - 32, 35), GearNameKorean(gear.Name) + "  +" + item.Enhancement,
                 26, GearInk(gear.Rarity), TextAnchor.MiddleLeft);
-            string owner = item.Owner < 0 ? "In bag" : "Equipped by " + battle.Heroes[item.Owner];
+            string owner = item.Owner < 0 ? "미장착" : "장착 영웅: " + battle.Heroes[item.Owner];
             ArcadeText(new Rect(x, y + 35, area.width - 32, 21), owner, 14, BodyInk, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(x, y + 57, area.width - 32, 20), "Item bonus: current → after enhancement", 13, BodyInk, TextAnchor.MiddleLeft);
-            string increase = capped ? stat + "  +" + item.Bonus + "  /  MAX" : stat + "  +" + item.Bonus + "  →  +" + item.BonusAt(item.Enhancement + 1);
+            ArcadeText(new Rect(x, y + 57, area.width - 32, 20), "장비 추가 능력치: 현재 → 강화 후", 13, BodyInk, TextAnchor.MiddleLeft);
+            string increase = capped ? stat + "  +" + item.Bonus + "  /  최대" : stat + "  +" + item.Bonus + "  →  +" + item.BonusAt(item.Enhancement + 1);
             ArcadeText(new Rect(x, y + 79, area.width - 32, 25), increase, 18, Parchment, TextAnchor.MiddleLeft);
             if (picking)
             {
                 var equipped = battle.Equipped(featureHero, gearSlot);
                 int delta = item.Bonus - (equipped?.Bonus ?? 0);
-                string compare = delta == 0 ? "Same as equipped" : (delta > 0 ? "+" : "") + delta + " vs. equipped";
+                string compare = delta == 0 ? "장착 중인 장비와 동일" : (delta > 0 ? "+" : "") + delta + " (장착 장비 대비)";
                 ArcadeText(new Rect(x, y + 105, area.width - 32, 18), compare,
                     13, delta >= 0 ? HallAmber : BodyInk, TextAnchor.MiddleLeft);
             }
-            ArcadeText(new Rect(x, y + 124, area.width - 32, 22), item.Owner < 0
-                ? "Equip to benefit. Applies next battle." : "Changes apply from the next battle.", 14, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(x, y + 124, area.width - 32, 22), idleSaveError != null ? "저장 실패: 공간을 확인하고 다시 시도해 주세요." : item.Owner < 0
+                ? "장착 후 다음 전투부터 효과가 적용됩니다." : "변경된 효과는 다음 전투부터 적용됩니다.", 14, HallAmber, TextAnchor.MiddleLeft);
             float actionWidth = (area.width - 40) / 2;
             var enhance = new Rect(16, area.height - 53, actionWidth, 41);
             var secondary = new Rect(enhance.xMax + 8, enhance.y, actionWidth, enhance.height);
             GUI.enabled = battle.CanEnhance(item);
-            if (GUI.Button(enhance, capped ? "Maximum level" : $"Enhance   {battle.EnhanceCost(item):N0} G", knightSelectedButton))
+            if (GUI.Button(enhance, capped ? "최대 강화" : $"강화 {battle.EnhanceCost(item):N0} 골드", knightSelectedButton))
             {
                 pendingSale = null;
                 battle.Enhance(item, progress => TrySaveProgress(progress, pendingSeconds));
@@ -795,8 +798,8 @@ namespace AFKTrial
             GUI.enabled = true;
             bool own = item.Owner == featureHero;
             GUI.enabled = item.Owner < 0 || (picking && own);
-            string action = picking ? (own ? "Remove" : "Equip") :
-                pendingSale == item ? "Confirm sale" : "Sell   " + gear.SellGold + " G";
+            string action = picking ? (own ? "해제" : "장착") :
+                pendingSale == item ? "판매 확정" : "판매   " + gear.SellGold + " 골드";
             if (GUI.Button(secondary, action, button))
             {
                 if (picking)
@@ -816,6 +819,8 @@ namespace AFKTrial
             GUI.EndGroup();
         }
 
+        private static string GearSlotKorean(TrialData.GearSlot slot) => slot == TrialData.GearSlot.Weapon ? "무기" : slot == TrialData.GearSlot.Armor ? "갑옷" : "목걸이";
+        private static string GearRarityKorean(TrialData.GearRarity rarity) => rarity == TrialData.GearRarity.Common ? "일반" : rarity == TrialData.GearRarity.Uncommon ? "고급" : "희귀";
         private GUIStyle inventoryText;
         private GUIStyle HudCentered => inventoryText ?? (inventoryText = new GUIStyle(small)
             { alignment = TextAnchor.MiddleCenter });
@@ -864,10 +869,10 @@ namespace AFKTrial
                 for (int j = 0; j < difficulties; j++)
                     if (battle.IsDungeonCleared(battle.Data.Dungeons[i, j])) cleared++;
                 ArcadeText(new Rect(art.x + 52, art.yMax - 68, art.width - 75, 26),
-                    gold ? "Gold rewards" : "Experience rewards", 16, HallLight, TextAnchor.MiddleLeft);
+                    gold ? "골드 보상" : "경험치 보상", 16, HallLight, TextAnchor.MiddleLeft);
                 string status = battle.CanEnterDungeon(tier)
-                    ? $"{cleared} / {difficulties} difficulties cleared"
-                    : "Unlocks after the first main-stage boss";
+                    ? $"{cleared} / {difficulties} 난이도 클리어"
+                    : "첫 메인 보스 처치 후 해금";
                 ArcadeText(new Rect(art.x + 21, art.yMax - 35, art.width - 70, 24),
                     status, 14, ink, TextAnchor.MiddleLeft);
                 CourtHeading(new Rect(art.xMax - 47, art.yMax - 51, 35, 41), "›", 31, TextAnchor.MiddleCenter);
@@ -889,14 +894,14 @@ namespace AFKTrial
             ManuscriptFade(new Rect(0, art.yMax - 147, art.width, 147), new Color32(10, 18, 30, 0), HallInk);
             CourtRule(new Rect(23, art.yMax - 76, 74, 1), ink);
             CourtHeading(new Rect(22, art.yMax - 66, art.width - 43, 52), entryTier.Name, 35, TextAnchor.MiddleLeft);
-            if (GUI.Button(new Rect(17, 16, 129, 42), "‹   All gates", GUI.skin.button)) selectedDungeon = null;
+            if (GUI.Button(new Rect(17, 16, 129, 42), "‹   던전 목록", GUI.skin.button)) selectedDungeon = null;
 
             var book = portrait ? new Rect(0, art.yMax, width, height - art.height) :
                 new Rect(art.xMax, 0, width - art.width, height);
             ManuscriptFade(book, new Color32(37, 42, 52, 255), HallInk);
             float left = book.x + 26, inner = book.width - 52;
             float top = book.y + (portrait ? 29 : 19);
-            CourtHeading(new Rect(left, top, inner, 38), "Choose difficulty", 27, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(left, top, inner, 38), "난이도 선택", 27, TextAnchor.MiddleLeft);
             int count = battle.Data.Dungeons.GetLength(1);
             float step = (inner + 8) / count;
             for (int i = 0; i < count; i++)
@@ -907,7 +912,7 @@ namespace AFKTrial
                 ManuscriptFade(tab, selected ? new Color32(65, 63, 60, 255) : ArcadeNavy, HallInk);
                 Fill(new Rect(tab.x, tab.yMax - (selected ? 3 : 1), tab.width, selected ? 3 : 1), selected ? ink : HallLine);
                 CourtHeading(new Rect(tab.x, tab.y + 4, tab.width, 29), option.Difficulty, 20, TextAnchor.MiddleCenter);
-                string state = battle.IsDungeonCleared(option) ? "Cleared" : battle.CanEnterDungeon(option) ? "Open" : "Locked";
+                string state = battle.IsDungeonCleared(option) ? "클리어" : battle.CanEnterDungeon(option) ? "입장 가능" : "잠김";
                 ArcadeText(new Rect(tab.x, tab.y + 32, tab.width, 23), state, 13, selected ? ink : BodyInk, TextAnchor.MiddleCenter);
                 if (GUI.Button(tab, GUIContent.none, GUIStyle.none)) dungeonDifficulty = i;
             }
@@ -916,26 +921,26 @@ namespace AFKTrial
             float metricsY = top + 141;
             CourtRule(new Rect(left, metricsY, inner, 1), HallLine);
             DrawLedgerAmount(new Rect(left, metricsY + 11, inner * 0.56f, 65), gold ? goldCoin : experienceCrystal,
-                "Victory reward", (gold ? tier.Gold : tier.Experience).ToString("N0", CultureInfo.InvariantCulture));
+                "승리 보상", (gold ? tier.Gold : tier.Experience).ToString("N0", CultureInfo.InvariantCulture));
             float timerX = left + inner * 0.59f;
             DrawCourtEmblem(new Rect(timerX, metricsY + 25, 27, 29), 5, ink);
-            ArcadeText(new Rect(timerX + 37, metricsY + 14, inner * 0.4f - 37, 22), "Time limit", 13, BodyInk, TextAnchor.MiddleLeft);
-            CourtHeading(new Rect(timerX + 37, metricsY + 34, inner * 0.4f - 37, 34), tier.Seconds + "s", 25, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(timerX + 37, metricsY + 14, inner * 0.4f - 37, 22), "제한 시간", 13, BodyInk, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(timerX + 37, metricsY + 34, inner * 0.4f - 37, 34), tier.Seconds + "초", 25, TextAnchor.MiddleLeft);
             CourtRule(new Rect(left, metricsY + 85, inner, 1), HallLine);
 
             bool canEnter = battle.CanEnterDungeon(tier);
             ArcadeText(new Rect(left, metricsY + 92, inner, 26), battle.IsDungeonCleared(tier)
-                ? "First-clear reward: completed"
-                : "First clear: +" + tier.FirstClearTickets + " summon ticket", 15, ink, TextAnchor.MiddleLeft);
+                ? "최초 클리어 보상: 완료"
+                : "최초 클리어: 소환권 +" + tier.FirstClearTickets + "장", 15, ink, TextAnchor.MiddleLeft);
             if (!canEnter)
             {
                 string requirement = !battle.CanEnterDungeon(entryTier)
-                    ? "Defeat the first main-stage boss to enter."
-                    : "Clear " + battle.Data.Dungeons[(int)kind, dungeonDifficulty - 1].Difficulty + " in this dungeon to enter.";
+                    ? "첫 메인 보스를 처치하면 입장할 수 있습니다."
+                    : "선행 난이도: " + battle.Data.Dungeons[(int)kind, dungeonDifficulty - 1].Difficulty + " 클리어 필요";
                 GUI.Label(new Rect(left, metricsY + 121, inner, 40), requirement, small);
             }
             GUI.enabled = canEnter;
-            if (GUI.Button(new Rect(left, book.yMax - 73, inner, 50), "Enter dungeon", knightSelectedButton))
+            if (GUI.Button(new Rect(left, book.yMax - 73, inner, 50), "던전 입장", knightSelectedButton))
                 EnterDungeon(tier);
             GUI.enabled = true;
         }
@@ -961,26 +966,26 @@ namespace AFKTrial
                 new Rect(Mathf.Clamp(0.22f - viewWidth * 0.5f, 0, 1 - viewWidth), 1 - viewHeight, viewWidth, viewHeight));
             ManuscriptFade(new Rect(0, art.yMax - 173, art.width, 173), new Color32(7, 16, 25, 0), HallInk);
             DrawCourtEmblem(new Rect(23, art.yMax - 96, 29, 33), 5, HallAmber);
-            ArcadeText(new Rect(62, art.yMax - 94, art.width - 85, 32), "Reward stage", 15, HallLight, TextAnchor.MiddleLeft);
-            CourtHeading(new Rect(22, art.yMax - 58, art.width - 40, 42), battle.StageName(hourly.Stage),
+            ArcadeText(new Rect(62, art.yMax - 94, art.width - 85, 32), "보상 기준 스테이지", 15, HallLight, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(22, art.yMax - 58, art.width - 40, 42), StageLabel(hourly.Stage),
                 portrait ? 31 : 27, TextAnchor.MiddleLeft);
 
             var book = portrait ? new Rect(0, art.yMax, width, height - art.height) :
                 new Rect(art.xMax, 0, width - art.width, height);
             ManuscriptFade(book, new Color32(36, 43, 55, 255), HallInk);
             float x = book.x + 29, inner = book.width - 58, y = book.y + (portrait ? 42 : 27);
-            CourtHeading(new Rect(x, y, inner, 43), "Earnings per hour", 30, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(x, y, inner, 43), "시간당 획득량", 30, TextAnchor.MiddleLeft);
             CourtRule(new Rect(x, y + 55, inner, 1), FrameGold);
-            DrawLedgerAmount(new Rect(x, y + 66, inner / 2, 86), goldCoin, "Gold",
+            DrawLedgerAmount(new Rect(x, y + 66, inner / 2, 86), goldCoin, "골드",
                 "+" + hourly.Gold.ToString("N0", CultureInfo.InvariantCulture));
-            DrawLedgerAmount(new Rect(x + inner / 2, y + 66, inner / 2, 86), experienceCrystal, "Experience",
+            DrawLedgerAmount(new Rect(x + inner / 2, y + 66, inner / 2, 86), experienceCrystal, "경험치",
                 "+" + hourly.Experience.ToString("N0", CultureInfo.InvariantCulture));
             CourtRule(new Rect(x, y + 157, inner, 1), HallLine);
-            DrawAccrualRow(x, y + 170, inner, "Accrual limit", battle.Data.IdleCapHours + " hours");
-            DrawAccrualRow(x, y + 218, inner, "Farming rate", battle.Data.IdleEfficiencyPercent + "%");
+            DrawAccrualRow(x, y + 170, inner, "최대 누적 시간", battle.Data.IdleCapHours + "시간");
+            DrawAccrualRow(x, y + 218, inner, "방치 보상 효율", battle.Data.IdleEfficiencyPercent + "%");
             CourtRule(new Rect(x, y + 271, inner, 1), HallLine);
             GUI.Label(new Rect(x, y + 287, inner, 63),
-                battle.Highest > 0 ? "Equipment may drop during idle farming." : "Clear the first stage to earn equipment while away.", small);
+                battle.Highest > 0 ? "방치 중에도 장비를 획득할 수 있습니다." : "첫 스테이지 클리어 후 방치 장비를 획득할 수 있습니다.", small);
         }
 
         private void DrawAccrualRow(float x, float y, float width, string caption, string value)
@@ -1003,10 +1008,10 @@ namespace AFKTrial
 
         private static string IdleDuration(long seconds)
         {
-            if (seconds >= 86400) return $"{seconds / 86400}d {seconds / 3600 % 24}h {seconds / 60 % 60}m";
-            if (seconds >= 3600) return $"{seconds / 3600}h {seconds / 60 % 60}m";
-            if (seconds >= 60) return $"{seconds / 60}m {seconds % 60}s";
-            return seconds + "s";
+            if (seconds >= 86400) return $"{seconds / 86400}일 {seconds / 3600 % 24}시간 {seconds / 60 % 60}분";
+            if (seconds >= 3600) return $"{seconds / 3600}시간 {seconds / 60 % 60}분";
+            if (seconds >= 60) return $"{seconds / 60}분 {seconds % 60}초";
+            return seconds + "초";
         }
 
         private Vector2 idleGearScroll;
@@ -1020,9 +1025,9 @@ namespace AFKTrial
                 counts[item.Gear.Name] = count + 1;
             }
             var lines = new List<string>();
-            foreach (var pair in counts) lines.Add($"{pair.Key}  x{pair.Value}");
-            if (equipment.Converted > 0) lines.Add($"Bag full: {equipment.Converted} converted to gold");
-            return lines.Count == 0 ? "No equipment found" : string.Join("\n", lines);
+            foreach (var pair in counts) lines.Add($"{GearNameKorean(pair.Key)}  ×{pair.Value}");
+            if (equipment.Converted > 0) lines.Add($"가방 초과: {equipment.Converted}개를 골드로 전환");
+            return lines.Count == 0 ? "획득한 장비 없음" : string.Join("\n", lines);
         }
 
         private void DrawIdleReturnPopup(int width, int height)
@@ -1041,26 +1046,26 @@ namespace AFKTrial
             ManuscriptFade(new Rect(art.x, art.yMax - 214, art.width, 214), new Color32(9, 19, 31, 0), HallInk);
             CourtRule(new Rect(art.x + 20, art.yMax - 159, 71, 1), HallAmber);
             ArcadeText(new Rect(art.x + 20, art.yMax - 151, art.width - 34, 22),
-                battle.StageName(reward.Stage), 13, FrameLight, TextAnchor.MiddleLeft);
-            CourtHeading(new Rect(art.x + 19, art.yMax - 130, art.width - 33, 47), "Welcome back", 34, TextAnchor.MiddleLeft);
+                StageLabel(reward.Stage), 13, FrameLight, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(art.x + 19, art.yMax - 130, art.width - 33, 47), "다시 오셨군요", 34, TextAnchor.MiddleLeft);
             ArcadeText(new Rect(art.x + 21, art.yMax - 72, art.width - 35, 22),
-                "Time away    " + IdleDuration(reward.AwaySeconds), 15, BodyInk, TextAnchor.MiddleLeft);
+                "부재 시간    " + IdleDuration(reward.AwaySeconds), 15, BodyInk, TextAnchor.MiddleLeft);
             if (reward.AwaySeconds > reward.CreditedSeconds)
                 ArcadeText(new Rect(art.x + 21, art.yMax - 46, art.width - 35, 22),
-                    "Reward time    " + IdleDuration(reward.CreditedSeconds), 15, FrameLight, TextAnchor.MiddleLeft);
+                    "보상 적용 시간    " + IdleDuration(reward.CreditedSeconds), 15, FrameLight, TextAnchor.MiddleLeft);
 
             var ledger = portrait ? new Rect(1, art.yMax, pageWidth - 2, pageHeight - art.yMax - 1)
                 : new Rect(art.xMax, 1, pageWidth - art.xMax - 1, pageHeight - 2);
             ManuscriptFade(ledger, new Color32(36, 43, 55, 255), HallInk);
             float x = ledger.x + 24, inner = ledger.width - 48, y = ledger.y + 21;
-            CourtHeading(new Rect(x, y, inner, 39), "Idle rewards", 28, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(x, y, inner, 39), "방치 보상", 28, TextAnchor.MiddleLeft);
             CourtRule(new Rect(x, y + 47, inner, 1), HallLine);
-            DrawLedgerAmount(new Rect(x, y + 58, inner / 2, 69), goldCoin, "Gold",
+            DrawLedgerAmount(new Rect(x, y + 58, inner / 2, 69), goldCoin, "골드",
                 "+" + reward.Gold.ToString("N0", CultureInfo.InvariantCulture));
-            DrawLedgerAmount(new Rect(x + inner / 2, y + 58, inner / 2, 69), experienceCrystal, "Experience",
+            DrawLedgerAmount(new Rect(x + inner / 2, y + 58, inner / 2, 69), experienceCrystal, "경험치",
                 "+" + reward.Experience.ToString("N0", CultureInfo.InvariantCulture));
             CourtRule(new Rect(x, y + 140, inner, 1), HallLine);
-            CourtHeading(new Rect(x, y + 149, inner, 35), "Equipment", 23, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(x, y + 149, inner, 35), "장비", 23, TextAnchor.MiddleLeft);
             float actionY = ledger.yMax - 68;
             var scroll = new Rect(x, y + 190, inner, actionY - (y + 190) - (saveFailed ? 57 : 13));
             var gear = new GUIContent(reward.EquipmentSummary);
@@ -1070,7 +1075,7 @@ namespace AFKTrial
             GUI.Label(new Rect(0, 0, listWidth, listHeight), gear, small);
             GUI.EndScrollView();
             if (saveFailed) GUI.Label(new Rect(x, actionY - 52, inner, 47), idleSaveError, small);
-            bool confirm = GUI.Button(new Rect(x, actionY, inner, 47), "Confirm & collect", knightSelectedButton);
+            bool confirm = GUI.Button(new Rect(x, actionY, inner, 47), "확인하고 수령", knightSelectedButton);
             GUI.EndGroup();
             if (confirm) ConfirmIdleReward();
         }

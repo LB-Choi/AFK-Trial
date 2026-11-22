@@ -96,13 +96,13 @@ namespace AFKTrial
             string json = File.ReadAllText(path);
             SaveRecord record;
             try { record = JsonUtility.FromJson<SaveRecord>(json); }
-            catch (ArgumentException error) { throw new InvalidDataException("Invalid progress file.", error); }
+            catch (ArgumentException error) { throw new InvalidDataException("저장 파일 형식이 올바르지 않습니다.", error); }
             if (record != null && record.version > SaveVersion)
-                throw new NotSupportedException("This save requires a newer game version.");
+                throw new NotSupportedException("더 최신 버전에서 만든 저장 파일입니다.");
             if (record == null || record.version != SaveVersion || record.lastSeenUtc <= 0 ||
                 record.lastSeenUtc > MaxUtcSeconds || record.pendingSeconds < 0 || record.pendingSeconds > MaxUtcSeconds ||
                 !battle.RestoreProgress(record.progress))
-                throw new InvalidDataException("The saved progress could not be read.");
+                throw new InvalidDataException("저장된 진행을 불러오지 못했습니다.");
             return record;
         }
 
@@ -152,7 +152,7 @@ namespace AFKTrial
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
             {
-                idleSaveError = "Could not save progress. Check available storage and try again.";
+                idleSaveError = "진행을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요.";
                 Debug.LogWarning(idleSaveError + " " + error.Message);
                 return false;
             }

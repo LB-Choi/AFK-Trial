@@ -72,14 +72,14 @@ namespace AFKTrial
             float y = wide ? area.height - 117 : 21;
             float textWidth = wide ? area.width - 30 : area.width * 0.47f;
             ArcadeText(new Rect(15, y, textWidth, 20),
-                battle.Data.Heroes[hero].Role.ToString().ToUpperInvariant() + "    /    Lv. " + battle.HeroLevel(hero),
+                RoleKorean(battle.Data.Heroes[hero].Role) + "    /    레벨 " + battle.HeroLevel(hero),
                 12, FrameLight, TextAnchor.MiddleLeft);
             CourtHeading(new Rect(15, y + 20, textWidth, 34), battle.Heroes[hero], 27, TextAnchor.MiddleLeft);
             var stats = battle.HeroStats(hero);
-            ArcadeText(new Rect(15, y + 55, textWidth, 22), $"HP  {stats.hp:0}     ATK  {stats.attack:0}",
+            ArcadeText(new Rect(15, y + 55, textWidth, 22), $"체력 {stats.hp:0}   공격력 {stats.attack:0}",
                 14, Parchment, TextAnchor.MiddleLeft);
             CourtRule(new Rect(16, y + 84, Mathf.Min(150, textWidth - 6), 1), FrameGold);
-            ArcadeText(new Rect(15, y + 87, textWidth, 22), "View dossier   ›", 13, FrameLight, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(15, y + 87, textWidth, 22), "상세 정보   ›", 13, FrameLight, TextAnchor.MiddleLeft);
             if (GUI.Button(area, GUIContent.none, GUIStyle.none)) ShowKnightDossier(hero);
             GUI.EndGroup();
 
@@ -123,7 +123,7 @@ namespace AFKTrial
             if (hero < 0)
             {
                 ArcadePanel(card, HallInk, selected ? HallAmber : HallLine);
-                ArcadeText(card, deployedSlot == 1 ? "Front · Empty" : "Rear · Empty", 16, HallLight, TextAnchor.MiddleCenter);
+                ArcadeText(card, deployedSlot == 1 ? "전열 · 빈자리" : "후열 · 빈자리", 16, HallLight, TextAnchor.MiddleCenter);
                 return;
             }
             bool owned = battle.Owned(hero);
@@ -145,11 +145,11 @@ namespace AFKTrial
             ManuscriptFade(new Rect(0, area.height - shadeHeight, area.width, shadeHeight),
                 Color.clear, new Color32(6, 12, 22, 253));
             CourtHeading(new Rect(4, area.height - 29, area.width - 8, 27),
-                owned ? battle.Heroes[hero] : "Locked", area.width < 139 ? 16 : 18, TextAnchor.MiddleCenter);
+                owned ? battle.Heroes[hero] : "잠김", area.width < 139 ? 16 : 18, TextAnchor.MiddleCenter);
             if (owned)
             {
                 ManuscriptFade(new Rect(0, 0, area.width, 33), new Color32(9, 17, 28, 194), Color.clear);
-                ArcadeText(new Rect(7, 3, 52, 19), "Lv. " + battle.HeroLevel(hero), 13, Parchment, TextAnchor.MiddleLeft);
+                ArcadeText(new Rect(7, 3, 52, 19), "레벨 " + battle.HeroLevel(hero), 13, Parchment, TextAnchor.MiddleLeft);
                 if (role != TrialData.Role.None)
                     Picture("RoleUI/" + RoleIcons[(int)role - 1], area.width - 29, 3, 25, 25);
                 if (deployedSlot >= 0)

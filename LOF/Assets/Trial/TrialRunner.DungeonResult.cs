@@ -34,22 +34,22 @@ namespace AFKTrial
             GUI.DrawTexture(banner, gold ? goldVault : experienceArchive, ScaleMode.ScaleAndCrop);
             ManuscriptFade(banner, new Color32(12, 23, 38, 176), new Color32(12, 23, 38, 235));
             GUI.DrawTexture(new Rect(23, 21, 59, 59), dungeonWon ? victoryMark : defeatMark, ScaleMode.ScaleToFit);
-            CourtHeading(new Rect(98, 35, 298, 47), dungeonWon ? "Dungeon victory" : "Dungeon defeat", 31, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(98, 35, 298, 47), dungeonWon ? "던전 승리" : "던전 패배", 31, TextAnchor.MiddleLeft);
             ArcadeText(new Rect(99, 15, 293, 24), resultDungeon.Name + "   /   " + resultDungeon.Difficulty,
                 14, FrameLight, TextAnchor.MiddleLeft);
             CourtRule(new Rect(21, 97, 378, 1), FrameGold);
-            DrawRewardAmount(210, 109, gold ? goldCoin : experienceCrystal, gold ? "Gold earned" : "Experience earned", dungeonReward);
+            DrawRewardAmount(210, 109, gold ? goldCoin : experienceCrystal, gold ? "획득 골드" : "획득 경험치", dungeonReward);
             ArcadeText(new Rect(26, 218, 368, 28), dungeonTicketReward > 0
-                ? "First clear: +" + dungeonTicketReward + " summon ticket"
-                : "Summon tickets earned: 0", 16, FrameLight, TextAnchor.MiddleCenter);
+                ? "최초 클리어: 소환권 +" + dungeonTicketReward + "장"
+                : "획득 소환권: 0장", 16, FrameLight, TextAnchor.MiddleCenter);
             if (saveFailed)
             {
                 GUI.Label(new Rect(26, 247, 368, 44), idleSaveError, HudCentered);
-                if (GUI.Button(new Rect(30, panelHeight - 63, 146, 44), "Retry save", button)) CheckpointProgress();
+                if (GUI.Button(new Rect(30, panelHeight - 63, 146, 44), "저장 재시도", button)) CheckpointProgress();
             }
             GUI.enabled = !saveFailed;
             bool resume = GUI.Button(new Rect(saveFailed ? 190 : 110, panelHeight - 63, 200, 44),
-                "Resume battle", knightSelectedButton);
+                "전투 재개", knightSelectedButton);
             GUI.enabled = true;
             GUI.EndGroup();
 

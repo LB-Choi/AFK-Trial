@@ -38,6 +38,7 @@ namespace AFKTrial
             public string[] formation;
             public HeroProgress[] heroes;
             public GearProgress[] inventory;
+            public BossAttempt[] bossHistory;
         }
 
         [Serializable]
@@ -84,7 +85,7 @@ namespace AFKTrial
                 goldVaultClears = clearedDungeonTiers[(int)TrialData.DungeonKind.GoldVault],
                 experienceArchiveClears = clearedDungeonTiers[(int)TrialData.DungeonKind.ExperienceArchive],
                 formation = Array.ConvertAll(formation, index => index < 0 ? "" : Data.Heroes[index].Id),
-                heroes = heroes.ToArray(), inventory = items
+                heroes = heroes.ToArray(), inventory = items, bossHistory = BossHistory
             };
         }
 
@@ -98,7 +99,7 @@ namespace AFKTrial
                 saved.goldVaultClears < 0 || saved.goldVaultClears > TrialData.DungeonTierCount ||
                 saved.experienceArchiveClears < 0 || saved.experienceArchiveClears > TrialData.DungeonTierCount ||
                 saved.formation == null || saved.formation.Length != formation.Length ||
-                saved.heroes == null || saved.inventory == null) return false;
+                saved.heroes == null || saved.inventory == null || !ValidBossHistory(saved.bossHistory)) return false;
 
             var roster = new HeroProgress[heroLevels.Length];
             foreach (var hero in saved.heroes)
@@ -163,6 +164,8 @@ namespace AFKTrial
             Array.Copy(party, formation, party.Length);
             inventory.Clear();
             inventory.AddRange(items);
+            bossHistory.Clear();
+            if (saved.bossHistory != null) bossHistory.AddRange(Array.ConvertAll(saved.bossHistory, item => item.Copy()));
             StartBattle();
             return true;
         }

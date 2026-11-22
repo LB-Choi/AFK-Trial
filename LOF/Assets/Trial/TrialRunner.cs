@@ -37,6 +37,8 @@ namespace AFKTrial
             resultDungeon = null;
             atTitle = true;
             showRecruit = false;
+            bossReview = bossPrevious = null;
+            bossResultPending = false;
             systemMenu = SystemMenu.Closed;
             LoadDisplaySettings();
             try
@@ -59,7 +61,7 @@ namespace AFKTrial
             catch (System.Exception error)
             {
                 battle = null;
-                loadError = error.Message;
+                loadError = "게임을 시작하지 못했습니다. 데이터·저장 파일과 다른 실행 창을 확인해 주세요.";
                 Debug.LogException(error);
                 return;
             }
@@ -77,7 +79,7 @@ namespace AFKTrial
         {
             if (battle == null || progressLock == null || suspended) return;
             if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
-            if (HasPendingIdleReward || HasDungeonResult || showRecruit || SystemMenuOpen) return;
+            if (HasPendingIdleReward || HasDungeonResult || showRecruit || SystemMenuOpen || HasBossReview) return;
             if (battle.Finished)
             {
                 if (battle.ActiveDungeon != null) { ReturnFromDungeon(); return; }
@@ -96,6 +98,7 @@ namespace AFKTrial
                 {
                     CheckpointProgress(battle.Won);
                     showRecruit = battle.RecruitReward.HasValue;
+                    ShowCompletedBoss();
                 }
             }
         }
@@ -111,7 +114,7 @@ namespace AFKTrial
         {
             if (battle == null)
             {
-                if (loadError != null) GUI.Box(new Rect(12, 12, Screen.width - 24, 100), "Data loading failed\n" + loadError);
+                if (loadError != null) GUI.Box(new Rect(12, 12, Screen.width - 24, 100), "게임 데이터를 불러오지 못했습니다. 데이터 파일을 확인해 주세요.");
                 return;
             }
             if (title == null)
@@ -174,6 +177,12 @@ namespace AFKTrial
                 DrawIdleReturnPopup(width, height);
                 return;
             }
+            if (HasBossReview)
+            {
+                if (Event.current.type == EventType.Repaint) DrawLiveBattle(width, height);
+                DrawBossReview(width, height);
+                return;
+            }
             if (editing)
             {
                 DrawHeroes(width, height);
@@ -196,7 +205,7 @@ namespace AFKTrial
             }
             catch (System.Exception error)
             {
-                loadError = error.Message;
+                loadError = "게임을 시작하지 못했습니다. 데이터·저장 파일과 다른 실행 창을 확인해 주세요.";
                 Debug.LogException(error);
             }
         }
@@ -212,9 +221,9 @@ namespace AFKTrial
             Picture("KnightUI/OrderSeal", left, top - 52, 48, 48);
             CourtHeading(new Rect(left, top, width * .48f, 90), "AFK Trial", 64, TextAnchor.MiddleLeft);
             CourtRule(new Rect(left, top + 91, width * .30f, 1), HallAmber);
-            if (ArcadeTab(new Rect(left, top + 123, 205, 51), "Enter game", true)) BeginPlay();
+            if (ArcadeTab(new Rect(left, top + 123, 205, 51), "게임 시작", true)) BeginPlay();
             if (loadError != null) GUI.Label(new Rect(left, top + 182, width * .45f, 80), loadError, small);
-            if (GUI.Button(new Rect(width - 142, 16, 126, 38), "Settings", button)) OpenSystemMenu();
+            if (GUI.Button(new Rect(width - 142, 16, 126, 38), "설정", button)) OpenSystemMenu();
         }
 
         private void DrawRecruitScreen(int width, int height)
@@ -225,11 +234,11 @@ namespace AFKTrial
             var art = portraits[reward.Hero];
             GUI.DrawTexture(new Rect(mid - 325, height * .1f, 320, height * .8f), art, ScaleMode.ScaleToFit);
             ArcadeText(new Rect(mid + 12, height * .33f, 260, 24),
-                reward.IsNew ? "KNIGHT RECRUITED" : "KNIGHT LEVEL UP", 16, HallAmber, TextAnchor.MiddleLeft);
+                reward.IsNew ? "새 기사 영입" : "기사 레벨 상승", 16, HallAmber, TextAnchor.MiddleLeft);
             CourtHeading(new Rect(mid + 12, height * .38f, width * .46f, 67),
                 battle.Heroes[reward.Hero], 39, TextAnchor.MiddleLeft);
-            GUI.Label(new Rect(mid + 14, height * .52f, 232, 32), "Lv. " + reward.Level, label);
-            if (ArcadeTab(new Rect(mid + 12, height * .63f, 194, 48), "Continue", true)) showRecruit = false;
+            GUI.Label(new Rect(mid + 14, height * .52f, 232, 32), "레벨 " + reward.Level, label);
+            if (ArcadeTab(new Rect(mid + 12, height * .63f, 194, 48), "계속", true)) showRecruit = false;
         }
 
         private void DrawLiveBattle(int width, int height)
@@ -247,7 +256,7 @@ namespace AFKTrial
             {
                 var loot = new Rect((width - 286) / 2f, statusArea.y - 31, 286, 30);
                 DrawKnightPanel(loot);
-                GUI.Label(loot, battle.GearReward.Name + (battle.GearConverted ? "  /  Converted to gold" : "  /  Acquired"), HudCentered);
+                GUI.Label(loot, GearNameKorean(battle.GearReward.Name) + (battle.GearConverted ? "  /  골드로 전환" : "  /  획득"), HudCentered);
             }
             if (showRetry)
                 DrawBattleRetry(new Rect(width - 148, trayTop - 43, 134, 40));
@@ -370,7 +379,7 @@ namespace AFKTrial
             if (heroView == HeroView.Formation) { DrawHeroSlots(width, height); return; }
             if (heroView == HeroView.GearPicker)
             {
-                if (DrawRosterHeader(width, battle.Heroes[featureHero], "Hero info")) heroView = HeroView.Info;
+                if (DrawRosterHeader(width, battle.Heroes[featureHero], "영웅 정보")) heroView = HeroView.Info;
                 GUI.BeginGroup(new Rect(0, 64, width, height - 64));
                 DrawInventory(true, width, height - 64);
                 GUI.EndGroup();
@@ -383,17 +392,17 @@ namespace AFKTrial
                 var dossier = new Rect((width - dossierWidth) / 2, height > width ? 73 : (height - dossierHeight) / 2,
                     dossierWidth, dossierHeight);
                 DrawKnightPanel(new Rect(dossier.x - 6, dossier.y - 4, dossier.width + 12, dossier.height + 6));
-                if (DrawRosterHeader(width, "Knight dossier", "Heroes")) heroView = HeroView.List;
+                if (DrawRosterHeader(width, "영웅 상세", "영웅")) heroView = HeroView.List;
                 GUI.BeginGroup(dossier);
                 DrawHeroDossier(dossierWidth, dossierHeight);
                 GUI.EndGroup();
-                if (ArcadeTab(new Rect(width / 2f - 235, height - 58, 220, 42), "Edit formation", false))
+                if (ArcadeTab(new Rect(width / 2f - 235, height - 58, 220, 42), "편성 변경", false))
                     BeginHeroPlacement();
-                if (ArcadeTab(new Rect(width / 2f + 15, height - 58, 220, 42), "Back to battle", true))
+                if (ArcadeTab(new Rect(width / 2f + 15, height - 58, 220, 42), "전투로 돌아가기", true))
                     editing = false;
                 return;
             }
-            if (DrawRosterHeader(width, "Hero roster", heroesFromMenu ? "Knight Hall" : "Battle"))
+            if (DrawRosterHeader(width, "보유 영웅", heroesFromMenu ? "기사단 홀" : "전투"))
             {
                 if (heroesFromMenu) OpenMenu(); else editing = false;
             }
@@ -458,8 +467,8 @@ namespace AFKTrial
 
         private void DrawHeroSlots(int width, int height)
         {
-            GUI.Label(new Rect(20, 12, width - 40, 42), "Edit formation", title);
-            GUI.Label(new Rect(20, 65, width - 40, 40), "Choose a slot for " + battle.Heroes[featureHero] + "   ·   Center front row deals and takes 20% more damage.", label);
+            GUI.Label(new Rect(20, 12, width - 40, 42), "편성 변경", title);
+            GUI.Label(new Rect(20, 65, width - 40, 40), "배치할 영웅: " + battle.Heroes[featureHero] + "   ·   중앙 전열은 주는 피해·받는 피해 +20%", label);
             var board = new Rect(width * .18f, 148, width * .64f, height - 268);
             for (int i = 0; i < draft.Length; i++)
             {
@@ -467,11 +476,11 @@ namespace AFKTrial
                 if (GUI.Button(card, GUIContent.none, GUIStyle.none)) SelectHeroSlot(i);
                 DrawRosterCard(card, draft[i], i, selectedSlot == i);
             }
-            DrawSynergyLine(20, 108, "Active", battle.ActiveSynergy);
-            if (selectedSlot >= 0) DrawSynergyLine(20, board.yMax + 7, "Next battle", battle.FormationSynergy(draft));
-            if (GUI.Button(new Rect(20, height - 60, 120, 42), "Cancel", button)) heroView = HeroView.Info;
+            DrawSynergyLine(20, 108, "현재", battle.ActiveSynergy);
+            if (selectedSlot >= 0) DrawSynergyLine(20, board.yMax + 7, "다음 전투", battle.FormationSynergy(draft));
+            if (GUI.Button(new Rect(20, height - 60, 120, 42), "취소", button)) heroView = HeroView.Info;
             GUI.enabled = selectedSlot >= 0 && battle.HeroAt(selectedSlot) != featureHero;
-            if (GUI.Button(new Rect(width - 245, height - 60, 225, 42), "Apply next battle", button))
+            if (GUI.Button(new Rect(width - 245, height - 60, 225, 42), "다음 전투에 적용", button))
                 ConfirmFormation();
             GUI.enabled = true;
         }

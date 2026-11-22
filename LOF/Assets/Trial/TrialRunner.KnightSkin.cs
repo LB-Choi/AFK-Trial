@@ -8,6 +8,7 @@ namespace AFKTrial
         private GUIStyle knightPanel, knightSelectedButton;
         private Texture2D knightAtlas, knightSeal;
         private Font courtFont;
+        private Font koreanFont;
         private GUIStyle courtHeading;
         private Texture2D coatMedallion;
         private readonly System.Collections.Generic.Dictionary<(Color32, Color32), Texture2D> courtFades =
@@ -31,6 +32,10 @@ namespace AFKTrial
         {
             knightSkin = Instantiate(GUI.skin);
             knightSkin.hideFlags = HideFlags.HideAndDontSave;
+            koreanFont = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Arial" }, 18);
+            knightSkin.font = koreanFont;
+            label.font = small.font = damage.font = koreanFont;
+            knightSkin.label.font = knightSkin.textField.font = koreanFont;
             knightAtlas = LoadTexture("KnightUI/AtlasBackdrop");
             knightSeal = LoadTexture("KnightUI/OrderSeal");
 
@@ -41,6 +46,7 @@ namespace AFKTrial
             var selected = MakeSkinPlate(new Color32(111, 81, 45, 255), HudAmber);
             var common = new GUIStyle(knightSkin.button)
             {
+                font = koreanFont,
                 alignment = TextAnchor.MiddleCenter,
                 border = new RectOffset(9, 9, 9, 9),
                 padding = new RectOffset(7, 7, 2, 3),
@@ -67,7 +73,7 @@ namespace AFKTrial
             // Only select an installed face. The built-in player font is the portable fallback.
             if (System.Array.IndexOf(Font.GetOSInstalledFontNames(), "Georgia") >= 0)
                 courtFont = Font.CreateDynamicFontFromOSFont("Georgia", 32);
-            if (courtFont != null) title.font = courtFont;
+            title.font = koreanFont;
             title.fontStyle = FontStyle.Normal;
             title.fontSize = 27;
             title.normal.textColor = Parchment;
@@ -179,6 +185,7 @@ namespace AFKTrial
             if (courtHeading == null)
                 courtHeading = new GUIStyle(title) { padding = new RectOffset(), clipping = TextClipping.Clip, wordWrap = false };
             courtHeading.fontSize = size;
+            courtHeading.font = value == "AFK Trial" && courtFont != null ? courtFont : koreanFont;
             courtHeading.alignment = alignment;
             GUI.Label(area, value, courtHeading);
         }
@@ -225,6 +232,7 @@ namespace AFKTrial
         {
             if (knightSkin != null) Destroy(knightSkin);
             if (courtFont != null) Destroy(courtFont);
+            if (koreanFont != null) Destroy(koreanFont);
             foreach (var fade in courtFades.Values) Destroy(fade);
             foreach (var plate in skinPlates) Destroy(plate);
         }

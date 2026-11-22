@@ -440,6 +440,7 @@ namespace AFKTrial
                 Add(enemy, boss ? enemy.Name : enemy.Name + " " + (i + 1), false, i,
                     enemy.Hp * power, enemy.Attack * power);
             }
+            BeginBossAttempt();
         }
 
         private void Add(TrialData.Fighter stats, string name, bool ally, int lane, float hp, float attack)
@@ -562,6 +563,7 @@ namespace AFKTrial
             if (Finished) return;
             Finished = true;
             Won = won;
+            CompleteBossAttempt();
             foreach (var unit in Units)
             {
                 unit.Walking = false;

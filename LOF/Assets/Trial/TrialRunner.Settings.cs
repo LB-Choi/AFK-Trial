@@ -21,7 +21,7 @@ namespace AFKTrial
         private int helpStep;
         private GUIStyle settingsBody;
         private bool SystemMenuOpen => systemMenu != SystemMenu.Closed;
-        private bool CanOpenSystemMenu => !showRecruit && !HasPendingIdleReward && !HasDungeonResult;
+        private bool CanOpenSystemMenu => !showRecruit && !HasPendingIdleReward && !HasDungeonResult && !HasBossReview;
 
         private void LoadDisplaySettings()
         {
@@ -38,7 +38,7 @@ namespace AFKTrial
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is ArgumentException)
             {
-                settingsError = "Display settings could not be read. Default: damage numbers ON.";
+                settingsError = "표시 설정을 불러오지 못했습니다. 피해 숫자는 기본값인 켜짐으로 표시합니다.";
                 Debug.LogWarning(settingsError);
             }
         }
@@ -55,7 +55,7 @@ namespace AFKTrial
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
             {
-                settingsError = "Could not save this setting. Check storage and try again.";
+                settingsError = "설정을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요.";
                 return false;
             }
         }
@@ -76,7 +76,7 @@ namespace AFKTrial
 
         private bool TryResetProgress()
         {
-            if (systemMenu != SystemMenu.Reset || resetConfirmation != "RESET" || progressLock == null || suspended) return false;
+            if (systemMenu != SystemMenu.Reset || resetConfirmation != "초기화" || progressLock == null || suspended) return false;
             var fresh = new TrialBattle(battle.Data);
             long oldSeen = lastSeenUtc;
             try
@@ -90,7 +90,7 @@ namespace AFKTrial
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
             {
                 lastSeenUtc = oldSeen;
-                settingsError = "Reset could not be saved. Your current progress is still active. Please retry.";
+                settingsError = "초기화 저장에 실패했습니다. 현재 진행은 유지됩니다. 다시 시도해 주세요.";
                 return false;
             }
             battle.SkillApplied -= PlaySkillEffect;
@@ -101,6 +101,8 @@ namespace AFKTrial
             PendingIdleReward = default;
             idleSaveError = settingsError = null;
             resultDungeon = null;
+            bossReview = bossPrevious = null;
+            bossResultPending = false;
             showRecruit = editing = choosingRepeat = false;
             featurePage = -1;
             heroView = HeroView.Menu;
@@ -125,7 +127,7 @@ namespace AFKTrial
             if (progressLock == null) return true;
             CheckpointProgress();
             if (string.IsNullOrEmpty(idleSaveError)) return true;
-            settingsError = "Could not save. Quit was cancelled; retry after checking storage.";
+            settingsError = "저장 실패로 종료를 취소했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요.";
             return false;
         }
 
@@ -148,51 +150,51 @@ namespace AFKTrial
             const float panelWidth = 464, panelHeight = 490;
             GUI.BeginGroup(new Rect((width - panelWidth) / 2, (height - panelHeight) / 2, panelWidth, panelHeight));
             DrawKnightPanel(new Rect(0, 0, panelWidth, panelHeight));
-            string heading = systemMenu == SystemMenu.Settings ? "Settings" : systemMenu == SystemMenu.Information ? "Game information" :
-                systemMenu == SystemMenu.Reset ? "Reset progress?" : "Quit game?";
+            string heading = systemMenu == SystemMenu.Settings ? "설정" : systemMenu == SystemMenu.Information ? "게임 정보" :
+                systemMenu == SystemMenu.Reset ? "진행을 초기화할까요?" : "게임을 종료할까요?";
             CourtHeading(new Rect(24, 14, 360, 42), heading, 29, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(25, 58, 410, 23), atTitle ? "AFK TRIAL" : "BATTLE PAUSED", 13, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(25, 58, 410, 23), atTitle ? "AFK Trial" : "전투 일시정지", 13, HallAmber, TextAnchor.MiddleLeft);
             CourtRule(new Rect(24, 87, 416, 1), HallLine);
             if (systemMenu == SystemMenu.Settings)
             {
-                GUI.Label(new Rect(26, 108, 275, 31), "Damage numbers", label);
-                if (GUI.Button(new Rect(324, 104, 112, 35), showDamageNumbers ? "ON" : "OFF", button)) SetDamageNumbers(!showDamageNumbers);
-                ArcadeText(new Rect(26, 144, 410, 24), "Only floating damage text is affected.", 14, BodyInk, TextAnchor.MiddleLeft);
+                GUI.Label(new Rect(26, 108, 275, 31), "피해 숫자 표시", label);
+                if (GUI.Button(new Rect(324, 104, 112, 35), showDamageNumbers ? "켜짐" : "꺼짐", button)) SetDamageNumbers(!showDamageNumbers);
+                ArcadeText(new Rect(26, 144, 410, 24), "떠오르는 피해 숫자만 표시하거나 숨깁니다.", 14, BodyInk, TextAnchor.MiddleLeft);
                 GUI.enabled = !atTitle;
-                if (GUI.Button(new Rect(26, 184, 200, 43), "Help / guided tour", button)) { helpStep = 0; systemMenu = SystemMenu.Help; }
+                if (GUI.Button(new Rect(26, 184, 200, 43), "도움말 / 화면 안내", button)) { helpStep = 0; systemMenu = SystemMenu.Help; }
                 GUI.enabled = true;
-                if (GUI.Button(new Rect(238, 184, 200, 43), "Game information", button)) systemMenu = SystemMenu.Information;
+                if (GUI.Button(new Rect(238, 184, 200, 43), "게임 정보", button)) systemMenu = SystemMenu.Information;
                 GUI.enabled = progressLock != null && !suspended;
-                if (GUI.Button(new Rect(26, 243, 200, 43), "Reset progress", button)) { systemMenu = SystemMenu.Reset; resetConfirmation = ""; settingsError = null; }
+                if (GUI.Button(new Rect(26, 243, 200, 43), "진행 초기화", button)) { systemMenu = SystemMenu.Reset; resetConfirmation = ""; settingsError = null; }
                 GUI.enabled = true;
-                if (GUI.Button(new Rect(238, 243, 200, 43), "Quit game", button)) { systemMenu = SystemMenu.Quit; settingsError = null; }
-                GUI.Label(new Rect(26, 306, 412, 47), atTitle ? "Enter the game to view the guided tour or reset progress." :
-                    "Close settings to continue the same battle.\nEsc opens settings from other menus.", settingsBody);
+                if (GUI.Button(new Rect(238, 243, 200, 43), "게임 종료", button)) { systemMenu = SystemMenu.Quit; settingsError = null; }
+                GUI.Label(new Rect(26, 306, 412, 47), atTitle ? "게임에 진입하면 도움말과 진행 초기화를 사용할 수 있습니다." :
+                    "설정을 닫으면 같은 전투가 이어집니다.\n다른 메뉴에서도 Esc 키로 설정을 열 수 있습니다.", settingsBody);
             }
             else if (systemMenu == SystemMenu.Information)
             {
                 GUI.Label(new Rect(26, 109, 412, 275), "AFK Trial  /  " + Application.version +
-                    "\n\nA local single-player auto-battle prototype.\nCollect 10 knights, build a party of 1-3 and grow through main stages and resource dungeons." +
-                    "\n\nProgress is saved on this computer. Display settings are kept separately and survive a progress reset." +
-                    "\n\nBuilt with Unity. AI-assisted planning, art and implementation.", settingsBody);
+                    "\n\n로컬 싱글 플레이 자동 전투 게임입니다.\n기사 10종을 수집하고 1~3인 편성을 구성하여 메인 스테이지와 재화 던전을 공략하세요." +
+                    "\n\n진행은 이 컴퓨터에 저장됩니다. 표시 설정은 별도로 저장되며 진행 초기화 후에도 유지됩니다." +
+                    "\n\n유니티로 제작했습니다. 기획·아트·구현에 인공지능을 활용했습니다.", settingsBody);
             }
             else if (systemMenu == SystemMenu.Reset)
             {
-                GUI.Label(new Rect(26, 108, 412, 155), "This permanently resets ALL game progress on this computer: knights, levels, skills, gear, currencies, summons, stages and dungeon first-clear rewards.\n\nOffline rewards and the recovery save are also cleared. This cannot be undone.", settingsBody);
-                GUI.Label(new Rect(26, 270, 412, 27), "Type RESET to confirm:", label);
+                GUI.Label(new Rect(26, 108, 412, 155), "이 컴퓨터의 모든 게임 진행을 초기화합니다.\n기사·레벨·스킬·장비·재화·소환·스테이지·던전 최초 클리어 보상이 초기 상태로 돌아갑니다.\n\n방치 보상과 복구 저장도 삭제됩니다.\n초기화 후에는 되돌릴 수 없습니다.", settingsBody);
+                GUI.Label(new Rect(26, 270, 412, 27), "확인하려면 '초기화'를 입력하세요:", label);
                 GUI.SetNextControlName("ResetConfirmation");
                 resetConfirmation = GUI.TextField(new Rect(26, 303, 412, 32), resetConfirmation, 5);
-                GUI.enabled = resetConfirmation == "RESET" && progressLock != null && !suspended;
-                if (GUI.Button(new Rect(26, 345, 412, 40), "Erase progress and return to title", button)) TryResetProgress();
+                GUI.enabled = resetConfirmation == "초기화" && progressLock != null && !suspended;
+                if (GUI.Button(new Rect(26, 345, 412, 40), "진행 삭제 후 제목 화면으로", button)) TryResetProgress();
                 GUI.enabled = true;
             }
             else
             {
-                GUI.Label(new Rect(26, 111, 412, 115), "Your progress will be saved before exiting.\n\nOn your next visit, the current main stage starts again and offline rewards are calculated.", settingsBody);
-                if (GUI.Button(new Rect(26, 262, 412, 45), "Save and quit", button)) QuitGame();
+                GUI.Label(new Rect(26, 111, 412, 115), "현재 진행을 저장한 뒤 종료합니다.\n\n다시 접속하면 현재 메인 스테이지를 처음부터 시작하며 부재 시간에 따른 방치 보상을 계산합니다.", settingsBody);
+                if (GUI.Button(new Rect(26, 262, 412, 45), "저장하고 종료", button)) QuitGame();
             }
             if (!string.IsNullOrEmpty(settingsError)) GUI.Label(new Rect(26, 390, 412, 46), settingsError, small);
-            if (GUI.Button(new Rect(130, 445, 204, 32), systemMenu == SystemMenu.Settings ? "Close / resume" : "Cancel / back", button)) BackFromSystemMenu();
+            if (GUI.Button(new Rect(130, 445, 204, 32), systemMenu == SystemMenu.Settings ? "닫기 / 재개" : "취소 / 뒤로", button)) BackFromSystemMenu();
             GUI.EndGroup();
         }
 
@@ -225,14 +227,14 @@ namespace AFKTrial
             Fill(new Rect(focus.x, focus.y, 2, focus.height), HallAmber);
             Fill(new Rect(focus.xMax - 2, focus.y, 2, focus.height), HallAmber);
             bool dungeon = battle.ActiveDungeon != null;
-            string[] headings = { "Stage and battle timer", "Your deployed knights", dungeon ? "Dungeon rewards" : "Growth and activities", dungeon ? "Dungeon outcome" : "Defeat, farming and retry" };
+            string[] headings = { "스테이지와 전투 시간", "출전 중인 기사", dungeon ? "던전 보상" : "성장과 콘텐츠", dungeon ? "던전 전투 결과" : "패배·파밍·재도전" };
             string[] text = {
-                "Battles are automatic. Main-stage bosses appear at stages 5 and 10 in each round. The timer is the remaining battle time.\n\nThe top-right menu pauses combat. In a dungeon, Retreat leaves without a reward.",
-                "These are the knights fighting in the CURRENT battle. The bars show their remaining HP.\n\nDeploy 1-3 knights. Slot 1 is the front row: damage dealt and received both increase by 20%. Growth, gear and formation changes apply from the NEXT battle.",
-                dungeon ? "Victory grants the displayed dungeon currency. Each dungeon difficulty also grants 1 summon ticket on its first clear only.\n\nDefeat or retreat grants nothing. Finish the result screen to return to the main stage." :
-                    "Heroes: levels, skills and equipped gear. Formation: choose your party. Summon: spend tickets to recruit knights.\n\nHall opens gear, dungeons, stage repeat and idle rewards. Dungeons unlock after the first stage-5 boss. Offline rewards accumulate for up to 20 hours.",
-                dungeon ? "The status line shows the current battle outcome. A defeat does not consume the first-clear reward.\n\nEasy, Normal and Hard unlock in order, independently for each dungeon. Cleared tiers can be repeated for currency, but not another first-clear ticket." :
-                    "After defeat, your party farms a lower stage. Grow your knights or change formation, then press Retry when it appears here.\n\nA manually selected repeat stage continues until you stop it in Hall. Progress saves automatically. Close settings to resume the same battle."
+                "전투는 자동으로 진행됩니다. 각 회차의 5·10스테이지에서 보스가 등장하며 상단에는 남은 전투 시간이 표시됩니다.\n\n오른쪽 위 설정을 열면 전투가 멈춥니다. 던전에서 퇴각하면 보상 없이 돌아옵니다.",
+                "현재 전투에 출전한 기사와 남은 체력입니다.\n\n기사는 1~3명까지 편성할 수 있습니다. 1번은 전열이며 주는 피해·받는 피해가 20% 증가합니다. 성장·장비·편성 변경은 다음 전투부터 적용됩니다.",
+                dungeon ? "승리하면 표시된 던전 재화를 획득합니다. 각 던전의 난이도별 최초 승리에는 소환권 1장도 지급됩니다.\n\n패배·퇴각 시에는 보상이 없습니다. 결과창을 닫으면 메인 스테이지로 돌아갑니다." :
+                    "영웅에서 레벨·스킬·장비를 성장시키고 편성에서 출전 기사를 선택하세요. 소환에서는 소환권으로 기사를 영입합니다.\n\n홀에서 장비·던전·스테이지 반복·방치 보상을 이용할 수 있습니다. 던전은 첫 5스테이지 보스 처치 후 해금되며 방치 보상은 최대 20시간 누적됩니다.",
+                dungeon ? "현재 전투 결과가 표시되는 곳입니다. 패배해도 최초 클리어 보상 기회는 사라지지 않습니다.\n\n던전별로 쉬움·보통·어려움 순서로 해금됩니다. 클리어한 난이도를 반복하면 재화는 얻지만 최초 소환권은 다시 지급되지 않습니다." :
+                    "패배하면 낮은 스테이지에서 자동으로 파밍합니다. 기사를 성장시키거나 편성을 바꾼 뒤 이곳의 재도전 버튼을 누르세요.\n\n직접 지정한 반복 스테이지는 홀에서 중지할 때까지 유지됩니다. 진행은 자동 저장되며 설정을 닫으면 같은 전투가 이어집니다."
             };
             const float boxWidth = 464, boxHeight = 270;
             float top = helpStep == 0 ? (sideBattle ? 167 : 230) : (sideBattle ? 96 : 210);
@@ -241,11 +243,11 @@ namespace AFKTrial
             CourtHeading(new Rect(20, 12, 424, 34), headings[helpStep], 23, TextAnchor.MiddleLeft);
             GUI.Label(new Rect(20, 56, 424, 160), text[helpStep], settingsBody);
             GUI.enabled = helpStep > 0;
-            if (GUI.Button(new Rect(20, 226, 92, 32), "Previous", button)) helpStep--;
+            if (GUI.Button(new Rect(20, 226, 92, 32), "이전", button)) helpStep--;
             GUI.enabled = true;
-            if (GUI.Button(new Rect(123, 226, 104, 32), "Close", button)) systemMenu = SystemMenu.Settings;
+            if (GUI.Button(new Rect(123, 226, 104, 32), "닫기", button)) systemMenu = SystemMenu.Settings;
             ArcadeText(new Rect(239, 226, 78, 32), (helpStep + 1) + " / 4", 14, HallAmber, TextAnchor.MiddleCenter);
-            if (GUI.Button(new Rect(329, 226, 115, 32), helpStep == 3 ? "Done" : "Next", button))
+            if (GUI.Button(new Rect(329, 226, 115, 32), helpStep == 3 ? "완료" : "다음", button))
             {
                 if (helpStep == 3) systemMenu = SystemMenu.Settings;
                 else helpStep++;

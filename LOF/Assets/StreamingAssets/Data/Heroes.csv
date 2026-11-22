@@ -1,11 +1,11 @@
-id,name,portrait,animation,hp,attack,hpPerLevel,attackPerLevel,moveSpeed,range,attackInterval,startingSlot,role,baseArmor,armorPerLevel,recruitStage
-ice_knight,Ice Knight,IceKnightIdle,ice_knight,100,16,35,6,1.3,0.65,1,1,Attack,2,1,0
-scythe_knight,Scythe Knight,ScytheKnight,scythe_knight,100,16,35,6,1.3,0.65,1,2,Attack,2,1,0
-banner_paladin,Banner Paladin,BannerPaladin,banner_paladin,100,16,35,6,1.3,0.65,1,3,Support,4,2,0
-lion_guardian,Lion Guardian,LionGuardian,lion_guardian,100,16,35,6,1.3,0.65,1,0,Defense,8,3,0
-hammer_maid,Hammer Maid,HammerMaid,hammer_maid,100,16,35,6,1.3,0.65,1,0,Support,4,2,0
-katana_knight,Katana Knight,KatanaKnight,katana_knight,100,16,35,6,1.3,0.65,1,0,Attack,2,1,0
-royal_knight,Royal Knight,RoyalKnight,royal_knight,100,16,35,6,1.3,0.65,1,0,Defense,8,3,0
-sun_paladin,Sun Paladin,SunPaladin,sun_paladin,100,16,35,6,1.3,0.65,1,0,Support,4,2,0
-tower_knight,Tower Knight,TowerKnight,tower_knight,100,16,35,6,1.3,0.65,1,0,Defense,8,3,10
-axe_warrior,Axe Warrior,AxeWarrior,axe_warrior,100,16,35,6,1.3,0.65,1,0,Attack,2,1,5
+"id","name","portrait","animation","hp","attack","hpPerLevel","attackPerLevel","moveSpeed","range","attackInterval","startingSlot","role","baseArmor","armorPerLevel","recruitStage"
+"ice_knight","얼음검 기사","IceKnightIdle","ice_knight","100","16","35","6","1.3","0.65","1","1","Attack","2","1","0"
+"scythe_knight","낫 기사","ScytheKnight","scythe_knight","100","16","35","6","1.3","0.65","1","2","Attack","2","1","0"
+"banner_paladin","깃발 성기사","BannerPaladin","banner_paladin","100","16","35","6","1.3","0.65","1","3","Support","4","2","0"
+"lion_guardian","사자 수호기사","LionGuardian","lion_guardian","100","16","35","6","1.3","0.65","1","0","Defense","8","3","0"
+"hammer_maid","해머 메이드","HammerMaid","hammer_maid","100","16","35","6","1.3","0.65","1","0","Support","4","2","0"
+"katana_knight","카타나 기사","KatanaKnight","katana_knight","100","16","35","6","1.3","0.65","1","0","Attack","2","1","0"
+"royal_knight","왕실 기사","RoyalKnight","royal_knight","100","16","35","6","1.3","0.65","1","0","Defense","8","3","0"
+"sun_paladin","태양 성기사","SunPaladin","sun_paladin","100","16","35","6","1.3","0.65","1","0","Support","4","2","0"
+"tower_knight","방패 기사","TowerKnight","tower_knight","100","16","35","6","1.3","0.65","1","0","Defense","8","3","10"
+"axe_warrior","도끼 전사","AxeWarrior","axe_warrior","100","16","35","6","1.3","0.65","1","0","Attack","2","1","5"

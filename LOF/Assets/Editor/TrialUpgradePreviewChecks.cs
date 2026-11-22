@@ -40,7 +40,7 @@ namespace AFKTrial.Editor
                     var next = battle.SkillPreview(hero, slot, 2);
                     Require(current.Count > 0 && current.Count <= 3 && current.Count == next.Count &&
                         current.Select(row => row.label).SequenceEqual(next.Select(row => row.label)), "all 30 skills have aligned comparison rows");
-                    Require(current.All(row => row.value != "None"), "live skills have effect previews");
+                    Require(current.All(row => row.value != "없음"), "live skills have effect previews");
                 }
                 Require(JsonUtility.ToJson(battle.CaptureProgress()) == before, "preview never spends or mutates progress");
                 var unit = battle.Units[0];
@@ -81,13 +81,13 @@ namespace AFKTrial.Editor
             }
 
             int Find(string id) => data.Heroes.FindIndex(hero => hero.Id == id);
-            Require(Preview(Find("hammer_maid"), 0, 1).Contains("Normal enemy stun:0.2s") &&
-                Preview(Find("hammer_maid"), 0, 2).Contains("Boss stun:0.2s"), "normal and boss stun scaling");
+            Require(Preview(Find("hammer_maid"), 0, 1).Contains("일반 적 기절:0.2초") &&
+                Preview(Find("hammer_maid"), 0, 2).Contains("보스 기절:0.2초"), "normal and boss stun scaling");
             Require(Preview(Find("scythe_knight"), 0, 1) == Preview(Find("scythe_knight"), 0, 2) &&
                 Preview(Find("royal_knight"), 2, 1) == Preview(Find("royal_knight"), 2, 2), "non-scaling skills stay unchanged");
             Require(Preview(Find("tower_knight"), 2, 100) == Preview(Find("tower_knight"), 2, 101), "capped reduction does not promise further benefit");
-            Require(Preview(Find("axe_warrior"), 1, 1).Contains("1 x normal") &&
-                Preview(Find("axe_warrior"), 1, 2).Contains("2 x normal") &&
+            Require(Preview(Find("axe_warrior"), 1, 1).Contains("1배") &&
+                Preview(Find("axe_warrior"), 1, 2).Contains("2배") &&
                 Preview(Find("sun_paladin"), 2, 2).Contains("20%"), "speed multiplier and equalize healing scaling");
 
             // Exercise actual cast outputs independently of the display's formatting code.

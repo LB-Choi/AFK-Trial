@@ -48,34 +48,34 @@ namespace AFKTrial
             string N(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);
             void Row(string label, string value) => rows.Add((label, value));
             void Percent(string label) => Row(label, N(number.Fraction * 100) + "%");
-            void Duration() => Row("Duration", N(number.Duration) + "s");
-            void Damage() => Row("ATK damage", N(number.AttackScale * 100) + "% ATK");
+            void Duration() => Row("지속 시간", N(number.Duration) + "초");
+            void Damage() => Row("공격력 비례 피해", N(number.AttackScale * 100) + "% 공격력");
             switch (effect)
             {
-                case SkillEffect.Wave: Damage(); Row("Targets", "All enemies"); break;
-                case SkillEffect.Slow: Percent("Attack speed down"); Duration(); Row("Bosses", "Immune"); break;
+                case SkillEffect.Wave: Damage(); Row("대상", "모든 적"); break;
+                case SkillEffect.Slow: Percent("공격 속도 감소"); Duration(); Row("보스", "면역"); break;
                 case SkillEffect.Power: case SkillEffect.SwordOath: case SkillEffect.Rally: case SkillEffect.DoublePower:
-                    Percent("ATK increase"); Duration(); break;
-                case SkillEffect.Pierce: Damage(); Row("Enemy DEF", "Ignored"); break;
-                case SkillEffect.ArmorStrike: Damage(); Row("Extra DEF damage", N(number.ArmorScale) + " x own DEF"); break;
-                case SkillEffect.DrainCurrentHp: Percent("Current enemy HP loss"); break;
-                case SkillEffect.CurrentHp: Percent("Current enemy HP damage"); Row("Enemy DEF", "Ignored"); break;
-                case SkillEffect.Sunder: Percent("DEF decrease"); Duration(); break;
-                case SkillEffect.Weaken: Damage(); Percent("Enemy ATK decrease"); Duration(); break;
-                case SkillEffect.TeamHaste: Percent("Attack speed increase"); Duration(); break;
-                case SkillEffect.TeamArmor: case SkillEffect.Fortify: Percent("DEF increase"); Duration(); break;
-                case SkillEffect.Mend: Percent("Missing HP healed"); Row("Heal over", N(number.Duration) + "s"); break;
-                case SkillEffect.Guard: Percent("Final damage reduction"); Row("Duration", "Until battle ends"); break;
-                case SkillEffect.Stun: Damage(); Row("Normal enemy stun", N(number.Duration) + "s"); Row("Boss stun", N(number.BossDuration) + "s"); break;
+                    Percent("공격력 증가"); Duration(); break;
+                case SkillEffect.Pierce: Damage(); Row("적 방어력", "무시"); break;
+                case SkillEffect.ArmorStrike: Damage(); Row("방어력 추가 피해", N(number.ArmorScale) + " × 방어력"); break;
+                case SkillEffect.DrainCurrentHp: Percent("적 현재 체력 감소"); break;
+                case SkillEffect.CurrentHp: Percent("적 현재 체력 비례 피해"); Row("적 방어력", "무시"); break;
+                case SkillEffect.Sunder: Percent("방어력 감소"); Duration(); break;
+                case SkillEffect.Weaken: Damage(); Percent("적 공격력 감소"); Duration(); break;
+                case SkillEffect.TeamHaste: Percent("공격 속도 증가"); Duration(); break;
+                case SkillEffect.TeamArmor: case SkillEffect.Fortify: Percent("방어력 증가"); Duration(); break;
+                case SkillEffect.Mend: Percent("잃은 체력 회복"); Row("회복 시간", N(number.Duration) + "초"); break;
+                case SkillEffect.Guard: Percent("최종 피해 감소"); Row("지속 시간", "전투 종료까지"); break;
+                case SkillEffect.Stun: Damage(); Row("일반 적 기절", N(number.Duration) + "초"); Row("보스 기절", N(number.BossDuration) + "초"); break;
                 case SkillEffect.Double: Damage(); break;
-                case SkillEffect.Taunt: Row("Taunt per enemy", "Next 1 basic attack"); break;
-                case SkillEffect.TimedTaunt: Row("Taunt duration", N(number.Duration) + "s"); break;
-                case SkillEffect.Blind: Row("Blind duration", N(number.Duration) + "s"); break;
-                case SkillEffect.Equalize: Percent("Ally current HP healed"); Row("After healing", "Equalize HP ratios"); break;
-                case SkillEffect.MissingHp: Percent("Missing enemy HP damage"); Row("Enemy DEF", "Ignored"); break;
-                case SkillEffect.Frenzy: Row("Attack speed", N(1 + number.Fraction) + " x normal"); Duration(); break;
-                case SkillEffect.Flurry: Row("Equivalent hits", number.Hits.ToString(CultureInfo.InvariantCulture)); Row("Total damage", N(number.AttackScale * 100) + "% ATK"); break;
-                default: Row("Effect", "None"); break;
+                case SkillEffect.Taunt: Row("적별 도발", "다음 기본 공격 1회"); break;
+                case SkillEffect.TimedTaunt: Row("도발 시간", N(number.Duration) + "초"); break;
+                case SkillEffect.Blind: Row("실명 시간", N(number.Duration) + "초"); break;
+                case SkillEffect.Equalize: Percent("아군 현재 체력 비례 회복"); Row("회복 후", "체력 비율 균등화"); break;
+                case SkillEffect.MissingHp: Percent("적 잃은 체력 비례 피해"); Row("적 방어력", "무시"); break;
+                case SkillEffect.Frenzy: Row("공격 속도", N(1 + number.Fraction) + "배"); Duration(); break;
+                case SkillEffect.Flurry: Row("공격 횟수 환산", number.Hits.ToString(CultureInfo.InvariantCulture)); Row("총 피해", N(number.AttackScale * 100) + "% 공격력"); break;
+                default: Row("효과", "없음"); break;
             }
             return rows;
         }
