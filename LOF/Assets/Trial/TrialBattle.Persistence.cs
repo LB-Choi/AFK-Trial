@@ -17,6 +17,9 @@ namespace AFKTrial
         private (int gold, int experience) CreditDungeonVictory(TrialData.DungeonTier tier)
         {
             int oldGold = Gold, oldExperience = Experience;
+            int oldTickets = Tickets;
+            if (!IsDungeonCleared(tier)) Tickets = AddCurrency(Tickets, tier.FirstClearTickets);
+            TicketReward = Tickets - oldTickets;
             Gold = AddCurrency(Gold, tier.Gold);
             Experience = AddCurrency(Experience, tier.Experience);
             int kind = (int)tier.Kind;

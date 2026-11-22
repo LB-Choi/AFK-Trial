@@ -22,6 +22,7 @@ namespace AFKTrial.Editor
             {
                 ValidateLiveTables();
                 CheckSkillCasts(TrialData.Load());
+                TrialUpgradePreviewChecks.Check(TrialData.Load());
                 var fixture = new TrialData(Path.Combine(Application.dataPath, "Editor/TrialChecksData~"));
                 TrialBattle NewBattle() => new TrialBattle(fixture);
                 CheckEquipment(NewBattle());
@@ -29,6 +30,9 @@ namespace AFKTrial.Editor
                 CheckHeroGrowth(NewBattle());
                 CheckSummonsAndSkills(NewBattle());
                 CheckDungeons(NewBattle());
+                CheckDungeonFirstRewards(NewBattle());
+                CheckDungeonResultSave(NewBattle());
+                TrialSettingsChecks.Check(fixture);
                 CheckRepeatStage(NewBattle());
                 CheckOffAxisApproach(NewBattle());
                 for (int enemySlot = 3; enemySlot < 6; enemySlot++)
@@ -267,7 +271,7 @@ namespace AFKTrial.Editor
             Require(battle.TryStartDungeon(vault, 0), "retry dungeon after defeat");
             WinEncounter(battle);
             Require(battle.GoldReward == easy.Gold && battle.Gold == progress.gold + easy.Gold &&
-                battle.Experience == progress.experience && battle.Tickets == progress.tickets &&
+                battle.Experience == progress.experience && battle.Tickets == progress.tickets + easy.FirstClearTickets &&
                 battle.Highest == progress.highest && battle.CanEnterDungeon(normal) &&
                 !battle.CanEnterDungeon(battle.Data.Dungeons[(int)archive, 1]), "vault win credits gold and unlocks only its next difficulty");
             battle.Tick(1);
@@ -297,10 +301,130 @@ namespace AFKTrial.Editor
             Require(restored.Units[3].MaxHp == restored.Data.Enemies["normal"].Hp * archiveEasy.Power, "fixed dungeon enemy strength");
             WinEncounter(restored);
             Require(restored.Experience == int.MaxValue && restored.ExperienceReward == 1 && restored.GoldReward == 0 &&
-                restored.Gold == saved.gold && restored.Tickets == saved.tickets, "archive reports only experience actually credited");
+                restored.Gold == saved.gold && restored.Tickets == saved.tickets + archiveEasy.FirstClearTickets, "archive reports only currency actually credited");
             restored.StartBattle();
             Require(!restored.Farming && restored.ActiveStage == saved.stage && restored.Highest == saved.highest,
                 "dungeon victory returns to the original challenge target");
+        }
+
+        private static void CheckDungeonFirstRewards(TrialBattle battle)
+        {
+            var initial = battle.CaptureProgress();
+            initial.highest = battle.Data.BossEvery;
+            initial.stage = initial.highest + 1;
+            Require(battle.RestoreProgress(initial), "first dungeon reward fixture");
+            int initialTickets = battle.Tickets;
+            int expectedTickets = initialTickets;
+            string path = Path.Combine(Application.temporaryCachePath, "dungeon-reward-" + Guid.NewGuid() + ".json");
+            try
+            {
+                foreach (TrialData.DungeonKind kind in Enum.GetValues(typeof(TrialData.DungeonKind)))
+                for (int tier = 0; tier < TrialData.DungeonTierCount; tier++)
+                {
+                    var definition = battle.Data.Dungeons[(int)kind, tier];
+                    Require(definition.FirstClearTickets == 1, "each dungeon difficulty grants one first-clear ticket");
+                    Require(battle.TryStartDungeon(kind, tier), "enter uncleared difficulty");
+                    battle.ForceTimeout();
+                    Require(battle.Tickets == expectedTickets && battle.TicketReward == 0 && !battle.IsDungeonCleared(definition),
+                        "defeat neither pays nor consumes first clear");
+                    battle.StartBattle();
+                    Require(battle.TryStartDungeon(kind, tier), "enter for retreat");
+                    battle.RetreatFromDungeon();
+                    Require(battle.Tickets == expectedTickets && battle.TicketReward == 0 && !battle.IsDungeonCleared(definition),
+                        "retreat neither pays nor consumes first clear");
+                    battle.StartBattle();
+                    Require(battle.TryStartDungeon(kind, tier), "enter for first win");
+                    WinEncounter(battle);
+                    expectedTickets++;
+                    Require(battle.Tickets == expectedTickets && battle.TicketReward == 1 && battle.IsDungeonCleared(definition),
+                        "first win grants ticket with clear marker");
+                    battle.Tick(1);
+                    battle.RetreatFromDungeon();
+                    Require(battle.Tickets == expectedTickets && battle.TicketReward == 1, "finished encounter cannot settle twice");
+                    var write = typeof(TrialRunner).GetMethod("WriteAtomically",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(JsonUtility.ToJson(battle.CaptureProgress()));
+                    write.Invoke(null, new object[] { path, bytes });
+                    string committed = File.ReadAllText(path);
+                    using (var locked = new FileStream(path + ".tmp", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                    {
+                        bool rejected = false;
+                        try { write.Invoke(null, new object[] { path, bytes }); }
+                        catch (System.Reflection.TargetInvocationException error) when (error.InnerException is IOException) { rejected = true; }
+                        Require(rejected && File.ReadAllText(path) == committed, "failed save leaves committed wallet and clear markers intact");
+                    }
+                    write.Invoke(null, new object[] { path, bytes });
+                    battle = new TrialBattle(battle.Data);
+                    Require(battle.RestoreProgress(JsonUtility.FromJson<TrialBattle.Progress>(File.ReadAllText(path))) &&
+                        battle.Tickets == expectedTickets && battle.IsDungeonCleared(definition), "disk reload preserves tickets and clear marker together");
+                    Require(battle.TryStartDungeon(kind, tier), "repeat cleared difficulty after reload");
+                    int gold = battle.Gold, experience = battle.Experience;
+                    WinEncounter(battle);
+                    Require(battle.Tickets == expectedTickets && battle.TicketReward == 0 &&
+                        battle.Gold == gold + definition.Gold && battle.Experience == experience + definition.Experience,
+                        "repeat awards regular currency only");
+                    battle.StartBattle();
+                }
+                Require(expectedTickets == initialTickets + 6, "six difficulties grant exactly six tickets");
+                // Existing saves already carry clear markers: no retroactive grants or schema migration.
+                initial.goldVaultClears = initial.experienceArchiveClears = TrialData.DungeonTierCount;
+                Require(battle.RestoreProgress(initial) && battle.TryStartDungeon(TrialData.DungeonKind.GoldVault, 0), "legacy cleared save loads");
+                WinEncounter(battle);
+                Require(battle.Tickets == initialTickets && battle.TicketReward == 0, "legacy cleared difficulty cannot grant again");
+            }
+            finally
+            {
+                if (File.Exists(path)) File.Delete(path);
+                if (File.Exists(path + ".tmp")) File.Delete(path + ".tmp");
+            }
+        }
+
+        private static void CheckDungeonResultSave(TrialBattle battle)
+        {
+            var progress = battle.CaptureProgress();
+            progress.highest = battle.Data.BossEvery;
+            progress.stage = progress.highest + 1;
+            Require(battle.RestoreProgress(progress) && battle.TryStartDungeon(TrialData.DungeonKind.GoldVault, 0), "result save fixture");
+            WinEncounter(battle);
+            int tickets = battle.Tickets;
+            string path = Path.Combine(Application.temporaryCachePath, "dungeon-result-" + Guid.NewGuid() + ".json");
+            var host = new GameObject("Dungeon result save check");
+            host.SetActive(false); // Avoid opening the user's profile or loading presentation resources.
+            var runner = host.AddComponent<TrialRunner>();
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            void Set(string name, object value) => typeof(TrialRunner).GetField(name, flags).SetValue(runner, value);
+            object Get(string name) => typeof(TrialRunner).GetField(name, flags).GetValue(runner);
+            object Call(string name, params object[] arguments) => typeof(TrialRunner).GetMethod(name, flags).Invoke(runner, arguments);
+            try
+            {
+                Set("battle", battle);
+                Set("progressPath", path);
+                using (var locked = new FileStream(path + ".tmp", FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+                {
+                    Call("ReturnFromDungeon");
+                    Require(!string.IsNullOrEmpty((string)Get("idleSaveError")), "result reports save failure");
+                    Require((int)Get("dungeonTicketReward") == 1 && (bool)Get("dungeonWon") &&
+                        battle.TicketReward == 0 && battle.Tickets == tickets, "result preserves awarded ticket after returning to main battle");
+                }
+                Call("CheckpointProgress", false);
+                Require(Get("idleSaveError") == null && battle.Tickets == tickets, "retry save clears error without regranting");
+                var restored = new TrialBattle(battle.Data);
+                Set("battle", restored);
+                Call("ReadProgress", path);
+                Require(restored.Tickets == tickets && restored.IsDungeonCleared(restored.Data.Dungeons[0, 0]),
+                    "production save record restores both reward and completed difficulty");
+                Require(restored.TryStartDungeon(TrialData.DungeonKind.GoldVault, 0), "reenter saved dungeon");
+                WinEncounter(restored);
+                Call("ReturnFromDungeon");
+                Require((int)Get("dungeonTicketReward") == 0 && restored.Tickets == tickets,
+                    "repeat result displays zero tickets and does not regrant");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+                if (File.Exists(path)) File.Delete(path);
+                if (File.Exists(path + ".tmp")) File.Delete(path + ".tmp");
+            }
         }
 
         private static void CheckRepeatStage(TrialBattle battle)

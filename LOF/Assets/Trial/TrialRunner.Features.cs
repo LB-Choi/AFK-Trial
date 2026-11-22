@@ -168,6 +168,7 @@ namespace AFKTrial
             var wallet = new Rect(width - (portrait ? 205 : 240), 13, portrait ? 190 : 222, 37);
             DrawKnightPanel(wallet);
             DrawWallet(new Rect(wallet.x + 9, wallet.y + 2, wallet.width - 14, 33));
+            if (GUI.Button(new Rect(width - 142, 62, 124, 36), "Settings", button)) OpenSystemMenu();
 
             int featured = battle.HeroAt(1) >= 0 ? battle.HeroAt(1) : battle.FirstDeployedHero;
             var hero = battle.Data.Heroes[featured];
@@ -301,7 +302,7 @@ namespace AFKTrial
             bool tall = height > width;
             var hero = battle.Data.Heroes[featureHero];
             int level = battle.HeroLevel(featureHero);
-            float growthTop = height - (tall ? 109 : 90);
+            float growthTop = height - 150;
             float listTop = tall ? growthTop - 213 : 0;
             float column = tall ? (width - 41) * 0.5f : width * 0.257f;
             float skillX = width - 14 - column;
@@ -345,9 +346,11 @@ namespace AFKTrial
             }
             if (selectedSkill >= 0)
             {
-                float popupY = tall ? Mathf.Max(0, (backdrop.height - 330) / 2) : (height - 330) / 2;
-                GUI.BeginGroup(new Rect(tall ? (width - 340) / 2 : (skillX - 340) / 2, popupY, 340, 330));
-                DrawSkillDetails();
+                float popupWidth = Mathf.Min(520, width - 16);
+                float popupY = (height - 392) / 2;
+                Fill(new Rect(0, 0, width, height), new Color(0.01f, .02f, .03f, .75f));
+                GUI.BeginGroup(new Rect((width - popupWidth) / 2, popupY, popupWidth, 392));
+                DrawSkillDetails(popupWidth);
                 GUI.EndGroup();
                 return;
             }
@@ -387,17 +390,32 @@ namespace AFKTrial
             var cost = battle.HeroUpgradeCost(featureHero);
             ManuscriptFade(new Rect(0, top, width, height), new Color32(39, 39, 49, 255), HallInk);
             CourtRule(new Rect(9, top, width - 18, 1), HallLine);
+            var current = battle.HeroStats(featureHero);
+            bool hasNext = level > 0 && level < int.MaxValue;
+            var next = hasNext ? battle.HeroStats(featureHero, level + 1) : current;
+            float statWidth = (width - 30) / 3;
+            DrawGrowthStat(new Rect(15, top + 5, statWidth, 45), "HP", current.hp, next.hp, hasNext);
+            DrawGrowthStat(new Rect(15 + statWidth, top + 5, statWidth, 45), "ATK", current.attack, next.attack, hasNext);
+            DrawGrowthStat(new Rect(15 + statWidth * 2, top + 5, statWidth, 45), "DEF", current.armor, next.armor, hasNext);
             float actionWidth = width > 600 ? 178 : 149;
             float actionX = width - 14 - actionWidth;
             float cell = (actionX - 28) * 0.5f;
-            DrawLevelResource(new Rect(15, top + 8, cell, height - 16), goldCoin, "Gold", cost.gold, battle.Gold);
-            DrawLevelResource(new Rect(15 + cell, top + 8, cell, height - 16), experienceCrystal, "Experience", cost.experience, battle.Experience);
+            DrawLevelResource(new Rect(15, top + 54, cell, 70), goldCoin, "Gold", cost.gold, battle.Gold);
+            DrawLevelResource(new Rect(15 + cell, top + 54, cell, 70), experienceCrystal, "Experience", cost.experience, battle.Experience);
             GUI.enabled = battle.CanUpgradeHero(featureHero);
-            if (GUI.Button(new Rect(actionX, top + 13, actionWidth, 40), level == int.MaxValue ? "Maximum level" : $"Level up to {level + 1}", knightSelectedButton))
+            if (GUI.Button(new Rect(actionX, top + 59, actionWidth, 40), level == int.MaxValue ? "Maximum level" : $"Level up to {level + 1}", knightSelectedButton))
                 TryPurchaseHeroLevel(featureHero);
             GUI.enabled = true;
-            GUI.Label(new Rect(actionX - 5, top + 54, actionWidth + 10, height - 55),
-                string.IsNullOrEmpty(idleSaveError) ? "Applies next battle" : idleSaveError, HudCentered);
+            GUI.Label(new Rect(15, top + 127, width - 30, 22),
+                string.IsNullOrEmpty(idleSaveError) ? "Equipped gear + synergy included. Applies next battle." : idleSaveError, small);
+        }
+
+        private void DrawGrowthStat(Rect area, string name, float current, float next, bool hasNext)
+        {
+            ArcadeText(new Rect(area.x, area.y, area.width, 18), name + "   Current → After", 12, BodyInk, TextAnchor.MiddleLeft);
+            string value = current.ToString("0.##", CultureInfo.InvariantCulture) + (hasNext
+                ? " → " + next.ToString("0.##", CultureInfo.InvariantCulture) : "  /  MAX");
+            ArcadeText(new Rect(area.x, area.y + 19, area.width - 5, 25), value, 18, HallAmber, TextAnchor.MiddleLeft);
         }
 
         private void DrawLevelResource(Rect area, Texture2D icon, string name, long cost, int owned)
@@ -408,31 +426,49 @@ namespace AFKTrial
                 owned < cost ? new Color32(239, 169, 144, 255) : HallAmber, TextAnchor.MiddleLeft);
             ArcadeText(new Rect(area.x + 2, area.y + 49, area.width - 2, 19), $"Owned   {owned:N0}", 13, HallLight, TextAnchor.MiddleLeft);
         }
-        private void DrawSkillDetails()
+        private void DrawSkillDetails(float width)
         {
             int slot = selectedSkill;
             var skill = battle.Data.Skills[featureHero, slot];
             int level = battle.SkillLevel(featureHero, slot);
-            var panel = new Rect(2, 10, 335, 319);
+            var panel = new Rect(0, 0, width, 392);
             InventoryBox(panel, InventoryPanel, InventoryGold);
-            GUI.Label(new Rect(12, 21, 274, 44), skill.Name, label);
-            if (GUI.Button(new Rect(297, 18, 30, 30), "X")) selectedSkill = -1;
-            string description = string.IsNullOrWhiteSpace(skill.Description) ? "Skill details pending." : skill.Description;
-            description = description.Replace("10 x n%", (10L * level) + "%").Replace("n%", level + "%").Replace(" n ", " " + level + " ")
-                .Replace(" n)", " " + level + ")");
-            var content = new GUIContent(description);
-            float textHeight = Mathf.Max(99, small.CalcHeight(content, 289));
-            skillScroll = GUI.BeginScrollView(new Rect(12, 68, 312, 100), skillScroll, new Rect(0, 0, 289, textHeight));
-            GUI.Label(new Rect(0, 0, 289, textHeight), content, small);
+            GUI.Label(new Rect(16, 13, width - 68, 31), skill.Name, label);
+            if (GUI.Button(new Rect(width - 47, 12, 32, 30), "X", button)) selectedSkill = -1;
+            string trigger = slot == 0 ? "Every " + skill.Interval + " basic attacks" : "Every " + skill.Interval + "s";
+            ArcadeText(new Rect(16, 49, width - 32, 23), trigger, 14, BodyInk, TextAnchor.MiddleLeft);
+            bool hasNext = level > 0 && level < int.MaxValue;
+            var current = battle.SkillPreview(featureHero, slot, Math.Max(1, level));
+            var next = hasNext ? battle.SkillPreview(featureHero, slot, level + 1) : current;
+            float valueX = width * .44f, valueWidth = (width - valueX - 16) / 2;
+            ArcadeText(new Rect(valueX, 81, valueWidth, 23), "Current Lv." + level, 14, BodyInk, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(valueX + valueWidth, 81, valueWidth, 23), hasNext ? "After Lv." + (level + 1) : "MAX", 14, HallAmber, TextAnchor.MiddleLeft);
+            bool unchanged = true;
+            for (int i = 0; i < current.Count; i++)
+            {
+                float y = 111 + i * 33;
+                CourtRule(new Rect(16, y - 3, width - 32, 1), HallLine);
+                ArcadeText(new Rect(16, y, valueX - 24, 28), current[i].label, 14, HallLight, TextAnchor.MiddleLeft);
+                ArcadeText(new Rect(valueX, y, valueWidth - 5, 28), current[i].value, 14, HallLight, TextAnchor.MiddleLeft);
+                ArcadeText(new Rect(valueX + valueWidth, y, valueWidth - 5, 28), hasNext ? next[i].value : "—", 14, HallAmber, TextAnchor.MiddleLeft);
+                unchanged &= current[i].value == next[i].value;
+            }
+            string details = (hasNext && unchanged ? "No effect change at the next level.\n" : "") +
+                System.Text.RegularExpressions.Regex.Replace(skill.Description ?? "", @"\bn\b", level.ToString(CultureInfo.InvariantCulture)) +
+                "\nValues before battle modifiers. HP effects use HP at cast; healing is capped.";
+            float detailWidth = width - 49;
+            float detailHeight = Mathf.Max(54, small.CalcHeight(new GUIContent(details), detailWidth));
+            skillScroll = GUI.BeginScrollView(new Rect(16, 218, width - 32, 54), skillScroll, new Rect(0, 0, detailWidth, detailHeight));
+            GUI.Label(new Rect(0, 0, detailWidth, detailHeight), details, small);
             GUI.EndScrollView();
-            GUI.Label(new Rect(12, 175, 215, 30), $"Skill level {level} / {battle.HeroLevel(featureHero)}", label);
             long cost = battle.SkillCost(featureHero, slot);
             string status = level == int.MaxValue ? "Maximum level" : level >= battle.HeroLevel(featureHero)
                 ? $"Requires hero Lv.{level + 1}" : $"Gold {battle.Gold} / {cost}";
-            GUI.Label(new Rect(12, 206, 310, 46), idleSaveError ?? status, small);
+            GUI.Label(new Rect(16, 277, width - 32, 34), idleSaveError ?? status, small);
             GUI.enabled = battle.CanTrain(featureHero, slot);
-            if (GUI.Button(new Rect(12, 254, 214, 48), $"Upgrade  /  {cost} G", button)) TryTrainSkill(featureHero, slot);
+            if (GUI.Button(new Rect(16, 316, width - 32, 40), $"Upgrade  /  {cost:N0} G", button)) TryTrainSkill(featureHero, slot);
             GUI.enabled = true;
+            ArcadeText(new Rect(16, 361, width - 32, 25), "Changes apply from the next battle.", 14, HallAmber, TextAnchor.MiddleCenter);
         }
         private bool showSynergyEffects;
         private void OpenFeature(int page)
@@ -712,7 +748,7 @@ namespace AFKTrial
             bool capped = item.Enhancement >= battle.EnhancementLimit || item.Bonus == int.MaxValue;
             GUI.BeginGroup(panel);
             var area = new Rect(0, 0, panel.width, panel.height);
-            float artHeight = area.height - 164;
+            float artHeight = area.height - 212;
             var art = new Rect(0, 0, area.width, artHeight);
             var backdrop = FeatureTexture("KnightUI/OathChamber");
             // Crop the quiet stone alcove on the left, leaving the selected item as the focal point.
@@ -727,23 +763,26 @@ namespace AFKTrial
             Picture(GearIcon(item), art.center.x - iconSize * 0.42f, art.center.y - iconSize * 0.42f, iconSize * 0.84f, iconSize * 0.84f);
             ArcadeText(new Rect(15, 6, area.width - 30, 24), (gear.Rarity + "   ·   " + gear.Slot).ToUpperInvariant(),
                 12, GearInk(gear.Rarity), TextAnchor.MiddleLeft);
-            ManuscriptFade(new Rect(0, artHeight, area.width, 164), new Color32(35, 40, 52, 255), HallInk);
+            ManuscriptFade(new Rect(0, artHeight, area.width, 212), new Color32(35, 40, 52, 255), HallInk);
             CourtRule(new Rect(0, artHeight, area.width, 1), FrameGold);
             float x = 16, y = artHeight + 8;
             ArcadeText(new Rect(x, y, area.width - 32, 35), gear.Name + "  +" + item.Enhancement,
                 26, GearInk(gear.Rarity), TextAnchor.MiddleLeft);
             string owner = item.Owner < 0 ? "In bag" : "Equipped by " + battle.Heroes[item.Owner];
             ArcadeText(new Rect(x, y + 35, area.width - 32, 21), owner, 14, BodyInk, TextAnchor.MiddleLeft);
-            string increase = capped ? stat + "  +" + item.Bonus : stat + "  +" + item.Bonus + "  →  +" + item.BonusAt(item.Enhancement + 1);
-            ArcadeText(new Rect(x, y + 64, area.width - 32, 25), increase, 18, Parchment, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(x, y + 57, area.width - 32, 20), "Item bonus: current → after enhancement", 13, BodyInk, TextAnchor.MiddleLeft);
+            string increase = capped ? stat + "  +" + item.Bonus + "  /  MAX" : stat + "  +" + item.Bonus + "  →  +" + item.BonusAt(item.Enhancement + 1);
+            ArcadeText(new Rect(x, y + 79, area.width - 32, 25), increase, 18, Parchment, TextAnchor.MiddleLeft);
             if (picking)
             {
                 var equipped = battle.Equipped(featureHero, gearSlot);
                 int delta = item.Bonus - (equipped?.Bonus ?? 0);
                 string compare = delta == 0 ? "Same as equipped" : (delta > 0 ? "+" : "") + delta + " vs. equipped";
-                ArcadeText(new Rect(area.width * 0.48f, y + 64, area.width * 0.52f - 15, 25), compare,
-                    13, delta >= 0 ? HallAmber : BodyInk, TextAnchor.MiddleRight);
+                ArcadeText(new Rect(x, y + 105, area.width - 32, 18), compare,
+                    13, delta >= 0 ? HallAmber : BodyInk, TextAnchor.MiddleLeft);
             }
+            ArcadeText(new Rect(x, y + 124, area.width - 32, 22), item.Owner < 0
+                ? "Equip to benefit. Applies next battle." : "Changes apply from the next battle.", 14, HallAmber, TextAnchor.MiddleLeft);
             float actionWidth = (area.width - 40) / 2;
             var enhance = new Rect(16, area.height - 53, actionWidth, 41);
             var secondary = new Rect(enhance.xMax + 8, enhance.y, actionWidth, enhance.height);
@@ -885,12 +924,15 @@ namespace AFKTrial
             CourtRule(new Rect(left, metricsY + 85, inner, 1), HallLine);
 
             bool canEnter = battle.CanEnterDungeon(tier);
+            ArcadeText(new Rect(left, metricsY + 92, inner, 26), battle.IsDungeonCleared(tier)
+                ? "First-clear reward: completed"
+                : "First clear: +" + tier.FirstClearTickets + " summon ticket", 15, ink, TextAnchor.MiddleLeft);
             if (!canEnter)
             {
                 string requirement = !battle.CanEnterDungeon(entryTier)
                     ? "Defeat the first main-stage boss to enter."
                     : "Clear " + battle.Data.Dungeons[(int)kind, dungeonDifficulty - 1].Difficulty + " in this dungeon to enter.";
-                GUI.Label(new Rect(left, metricsY + 98, inner, 40), requirement, small);
+                GUI.Label(new Rect(left, metricsY + 121, inner, 40), requirement, small);
             }
             GUI.enabled = canEnter;
             if (GUI.Button(new Rect(left, book.yMax - 73, inner, 50), "Enter dungeon", knightSelectedButton))

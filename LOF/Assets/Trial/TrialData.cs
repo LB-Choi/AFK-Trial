@@ -30,7 +30,7 @@ namespace AFKTrial
         {
             private static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard" };
             public readonly DungeonKind Kind;
-            public readonly int Index, Gold, Experience;
+            public readonly int Index, Gold, Experience, FirstClearTickets;
             public readonly float Power, Seconds;
             public string Name => Kind == DungeonKind.GoldVault ? "Gold Vault" : "Experience Archive";
             public string Difficulty => DifficultyNames[Index];
@@ -45,6 +45,7 @@ namespace AFKTrial
                 Power = row.Number("power", true);
                 Seconds = row.Number("seconds", true);
                 int reward = row.Integer("reward", 1);
+                FirstClearTickets = row.Integer("firstClearTickets");
                 if (kind == DungeonKind.GoldVault) Gold = reward;
                 else Experience = reward;
             }

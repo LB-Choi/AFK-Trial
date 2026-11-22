@@ -9,7 +9,6 @@ namespace AFKTrial
         private Texture2D bossMark, victoryMark, defeatMark;
         private Texture2D goldCoin, experienceCrystal;
         private GUIStyle battleHudText;
-        private bool battleOptionsOpen;
         private static readonly Color bronzeRule = new Color(0.51f, 0.40f, 0.25f);
         private static readonly Color enemyAccent = new Color(0.86f, 0.48f, 0.43f);
 
@@ -63,32 +62,18 @@ namespace AFKTrial
             ArcadeText(new Rect(71, 9, sideBattle ? 350 : 222, 21), stageLine, 12, HudAmber, TextAnchor.MiddleLeft);
             CourtHeading(new Rect(69, 27, sideBattle ? 360 : 225, 44), dungeon?.Name ?? "Castle Gate", sideBattle ? 34 : 29, TextAnchor.MiddleLeft);
 
-            float actionWidth = dungeon == null ? 42 : 84;
-            var action = new Rect(width - actionWidth - 12, 12, actionWidth, 38);
+            var action = new Rect(width - 54, 12, 42, 38);
             float walletWidth = sideBattle ? 190 : 135;
-            var wallet = new Rect(action.x - walletWidth - 6, 13, walletWidth, 34);
+            var wallet = new Rect(action.x - walletWidth - (dungeon == null ? 6 : 96), 13, walletWidth, 34);
             ManuscriptFade(wallet, new Color32(9, 22, 33, 112), new Color32(9, 22, 33, 194));
             DrawWallet(new Rect(wallet.x + 6, wallet.y + 2, wallet.width - 12, wallet.height - 4));
             if (dungeon != null)
             {
-                if (GUI.Button(action, "Retreat", button)) battle.RetreatFromDungeon();
+                if (GUI.Button(new Rect(action.x - 90, action.y, 84, 38), "Retreat", button)) battle.RetreatFromDungeon();
             }
-            else if (GUI.Button(action, "•••", button))
-                battleOptionsOpen = !battleOptionsOpen;
+            if (GUI.Button(action, "•••", button)) OpenSystemMenu();
             DrawTimer(sideBattle ? new Rect(wallet.x - 98, 13, 92, 34) : new Rect(width - 112, 55, 100, 33));
             GUI.EndGroup();
-        }
-
-        private void DrawBattleOptions(int width)
-        {
-            if (!battleOptionsOpen) return;
-            GUI.enabled = !battle.Finished;
-            if (GUI.Button(new Rect(width - 198, 57 + StageHeaderOffset, 186, 44), "Test: force defeat", button))
-            {
-                battle.ForceTimeout();
-                battleOptionsOpen = false;
-            }
-            GUI.enabled = true;
         }
 
         private void DrawUnitHealth(TrialBattle.Unit unit, float x, float y)
@@ -169,7 +154,6 @@ namespace AFKTrial
                 Fill(new Rect(health.x, health.y, health.width * Mathf.Clamp01(hero.Hp / hero.MaxHp), 3), new Color32(142, 204, 173, 255));
                 if (battle.ActiveDungeon == null && GUI.Button(card, GUIContent.none, GUIStyle.none))
                 {
-                    battleOptionsOpen = false;
                     OpenHeroes();
                     featureHero = index;
                     selectedSkill = -1;
@@ -192,7 +176,6 @@ namespace AFKTrial
                 DrawCourtEmblem(new Rect(seal.x + 10, seal.y + 10, size - 20, size - 20), i == 3 ? 6 : i, HudAmber);
                 CourtHeading(new Rect(item.x, seal.yMax + 3, width, 24), BattleDockTitles[i], 16, TextAnchor.MiddleCenter);
                 if (!GUI.Button(item, GUIContent.none, GUIStyle.none)) continue;
-                battleOptionsOpen = false;
                 if (i == 0) OpenHeroes();
                 else
                 {

@@ -37,6 +37,8 @@ namespace AFKTrial
             resultDungeon = null;
             atTitle = true;
             showRecruit = false;
+            systemMenu = SystemMenu.Closed;
+            LoadDisplaySettings();
             try
             {
                 var data = TrialData.Load();
@@ -75,7 +77,7 @@ namespace AFKTrial
         {
             if (battle == null || progressLock == null || suspended) return;
             if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
-            if (HasPendingIdleReward || HasDungeonResult || showRecruit) return;
+            if (HasPendingIdleReward || HasDungeonResult || showRecruit || SystemMenuOpen) return;
             if (battle.Finished)
             {
                 if (battle.ActiveDungeon != null) { ReturnFromDungeon(); return; }
@@ -135,6 +137,28 @@ namespace AFKTrial
             float scale = Mathf.Min((float)Screen.width / width, (float)Screen.height / height);
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - width * scale) / 2,
                 (Screen.height - height * scale) / 2, 0), Quaternion.identity, Vector3.one * scale);
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
+            {
+                if (SystemMenuOpen) BackFromSystemMenu();
+                else if (CanOpenSystemMenu) OpenSystemMenu();
+                Event.current.Use();
+            }
+            if (SystemMenuOpen)
+            {
+                // Draw only: no click, scroll or keyboard events reach the covered game.
+                if (Event.current.type == EventType.Repaint)
+                {
+                    if (systemMenu == SystemMenu.Help) DrawLiveBattle(width, height);
+                    else DrawGameContent(width, height);
+                }
+                DrawSystemMenu(width, height);
+                return;
+            }
+            DrawGameContent(width, height);
+        }
+
+        private void DrawGameContent(int width, int height)
+        {
             if (atTitle)
             {
                 DrawEntryScreen(width, height);
@@ -190,6 +214,7 @@ namespace AFKTrial
             CourtRule(new Rect(left, top + 91, width * .30f, 1), HallAmber);
             if (ArcadeTab(new Rect(left, top + 123, 205, 51), "Enter game", true)) BeginPlay();
             if (loadError != null) GUI.Label(new Rect(left, top + 182, width * .45f, 80), loadError, small);
+            if (GUI.Button(new Rect(width - 142, 16, 126, 38), "Settings", button)) OpenSystemMenu();
         }
 
         private void DrawRecruitScreen(int width, int height)
@@ -235,7 +260,6 @@ namespace AFKTrial
                 return;
             }
             DrawBattleDock(sideBattle ? new Rect(513, trayTop + 9, width - 524, 102) : new Rect(5, 876, width - 10, 78));
-            DrawBattleOptions(width);
         }
 
         private void PrepareFieldDrawOrder()
@@ -479,7 +503,7 @@ namespace AFKTrial
         private void DrawDamage(TrialBattle.Unit unit, float x, float headY)
         {
             float age = BattleAnimationTime - unit.LastHitTime;
-            if (age >= 0.7f || unit.LastDamage <= 0) return;
+            if (!showDamageNumbers || age >= 0.7f || unit.LastDamage <= 0) return;
             float top = Mathf.Max(65, headY - 45 - age * 26);
             Rect bounds = new Rect(x - 45, top, 90, 30);
             string number = "-" + unit.LastDamage.ToString("0.##");

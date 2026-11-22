@@ -1,7 +1,7 @@
-kind,tier,power,seconds,reward
-GoldVault,1,2,60,75
-GoldVault,2,3,60,150
-GoldVault,3,4.5,60,240
-ExperienceArchive,1,2,60,45
-ExperienceArchive,2,3,60,90
-ExperienceArchive,3,4.5,60,150
+kind,tier,power,seconds,reward,firstClearTickets
+GoldVault,1,2,60,75,1
+GoldVault,2,3,60,150,1
+GoldVault,3,4.5,60,240,1
+ExperienceArchive,1,2,60,45,1
+ExperienceArchive,2,3,60,90,1
+ExperienceArchive,3,4.5,60,150,1
