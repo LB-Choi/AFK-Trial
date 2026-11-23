@@ -36,6 +36,26 @@ namespace AFKTrial.Editor
                 Set("showDamageNumbers", true);
                 Call("LoadDisplaySettings");
                 Require(!(bool)Get("showDamageNumbers"), "disabled setting survives reload");
+                Require((bool)Call("SetAudioVolumes", .2f, 0f), "independent volume save");
+                Call("LoadDisplaySettings");
+                Require(Mathf.Approximately((float)Get("musicVolume"), .2f) && (float)Get("effectsVolume") == 0 &&
+                    !(bool)Get("showDamageNumbers"), "mute and music volume survive reload without changing damage preference");
+                Require((bool)Call("SetDamageNumbers", false), "damage preference preserves volumes");
+                Call("LoadDisplaySettings");
+                Require((float)Get("effectsVolume") == 0, "damage save preserves mute");
+                Require(!(bool)Call("SetAudioVolumes", float.NaN, .5f), "nonfinite volume rejected");
+                string audioBefore = File.ReadAllText(settings);
+                using (var lockedAudio = new FileStream(settings + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None))
+                    Require(!(bool)Call("SetAudioVolumes", 1f, 1f) && (float)Get("effectsVolume") == 0 &&
+                        File.ReadAllText(settings) == audioBefore, "failed audio save preserves file and live values");
+                File.WriteAllText(settings, "{\"version\":1,\"showDamageNumbers\":false}");
+                Call("LoadDisplaySettings");
+                Require(Mathf.Approximately((float)Get("musicVolume"), .3f) && Mathf.Approximately((float)Get("effectsVolume"), .65f), "legacy settings use audio defaults");
+                Set("draftMusic", .9f); Menu("Audio");
+                var preview = typeof(TrialRunner).GetProperty("PreviewMusicVolume", Instance);
+                Require(Mathf.Approximately((float)preview.GetValue(runner), .9f), "audio panel previews unsaved background volume");
+                Call("BackFromSystemMenu");
+                Require(Mathf.Approximately((float)preview.GetValue(runner), .3f) && Mathf.Approximately((float)Get("musicVolume"), .3f), "closing audio panel restores saved background volume");
                 string settingsBefore = File.ReadAllText(settings);
                 using (var locked = new FileStream(settings + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None))
                     Require(!(bool)Call("SetDamageNumbers", true) && !(bool)Get("showDamageNumbers") &&
@@ -45,6 +65,7 @@ namespace AFKTrial.Editor
                 var progress = battle.CaptureProgress();
                 progress.highest = 5; progress.stage = 6; progress.gold = 1234; progress.tickets = 7;
                 progress.goldVaultClears = 1;
+                progress.guideReady = progress.guideSeen = TrialBattle.GuideMask;
                 Require(battle.RestoreProgress(progress), "progress fixture");
                 Set("battle", battle);
                 Set("progressPath", main);
@@ -58,7 +79,7 @@ namespace AFKTrial.Editor
                 for (int encounter = 0; encounter < 2; encounter++)
                 {
                     if (encounter == 1) Require(battle.TryStartDungeon(TrialData.DungeonKind.GoldVault, 0), "pause dungeon fixture");
-                    foreach (string menu in new[] { "Settings", "Help", "Information", "Reset", "Quit" })
+                    foreach (string menu in new[] { "Settings", "Help", "Information", "Reset", "Quit", "Audio", "BossInfo" })
                     {
                         Menu(menu);
                         Set("accumulator", .025f); Set("restartDelay", .3f);
@@ -120,6 +141,8 @@ namespace AFKTrial.Editor
                         "failed reset keeps active progress and committed main save");
                 Require((bool)Call("TryResetProgress"), "confirmed reset succeeds after retry");
                 var fresh = (TrialBattle)Get("battle");
+                Require(fresh.GuidePending(TrialBattle.Guide.FirstBattle) && !fresh.GuideSeen(TrialBattle.Guide.Growth),
+                    "production reset clears tutorial history");
                 Require(fresh.Highest == 0 && fresh.Stage == 1 && fresh.Gold == 0 && fresh.Tickets == data.StartingTickets &&
                     !fresh.IsDungeonCleared(data.Dungeons[0, 0]), "reset restores starting progression and reward eligibility");
                 Require((bool)Get("atTitle") && Get("progressLock") == null && !File.Exists(backup) &&

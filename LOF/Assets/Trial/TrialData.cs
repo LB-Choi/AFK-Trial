@@ -18,6 +18,7 @@ namespace AFKTrial
         }
         public readonly Skill[,] Skills;
         public readonly bool StartWithAllHeroes;
+        public readonly float[] SummonRates;
         public readonly int StartingTickets, FirstWinTickets, FirstBossTickets;
         public readonly Dictionary<int, int> FirstClearRecruits = new Dictionary<int, int>();
         public readonly int IdleCapHours, IdleEfficiencyPercent, IdleReferenceClearSeconds;
@@ -152,6 +153,19 @@ namespace AFKTrial
             }
             if (Array.IndexOf(StartingFormation, -1) >= 0)
                 throw new InvalidDataException("Heroes.csv requires one hero for each startingSlot 1, 2 and 3.");
+            SummonRates = new float[Heroes.Count];
+            var rateIds = new HashSet<string>();
+            double totalRate = 0;
+            foreach (var row in CsvRow.Read(directory, "SummonRates"))
+            {
+                string id = row.Text("heroId");
+                int index = Heroes.FindIndex(h => h.Id == id);
+                if (index < 0 || !rateIds.Add(id)) throw row.Error("unknown or duplicate heroId");
+                float rate = row.Number("percent", true);
+                SummonRates[index] = rate; totalRate += rate;
+            }
+            if (rateIds.Count != Heroes.Count || Math.Abs(totalRate - 100) > .0001)
+                throw new InvalidDataException("SummonRates.csv: 모든 영웅의 확률을 양수로 지정하고 합계를 100으로 맞춰 주세요.");
             var summon = CsvRow.Single(directory, "Summoning");
             int all = summon.Integer("startWithAllHeroes");
             if (all > 1) throw summon.Error("startWithAllHeroes must be 0 or 1");

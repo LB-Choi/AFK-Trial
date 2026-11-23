@@ -1,0 +1,51 @@
+Mono path[0] = 'C:/Users/Lazi_Boi/Documents/github/AFK-Trial/LOF/Builds/AmbienceReview/AFK-Trial_Data/Managed'
+Mono config path = 'C:/Users/Lazi_Boi/Documents/github/AFK-Trial/LOF/Builds/AmbienceReview/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Found 1 interfaces on host : 0) 148.185.122.101
+Player connection [17564]  Target information:
+
+Player connection [17564]  * "[IP] 148.185.122.101 [Port] 55000 [Flags] 2 [Guid] 960292652 [EditorId] 3516374228 [Version] 1048832 [Id] WindowsPlayer(2,laziboi) [Debug] 0 [PackageName] WindowsPlayer [ProjectName] AFK Trial - Test" 
+
+Player connection [17564] Started UDP target info broadcast (1) on [225.0.0.222:54997].
+
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.0f1 (88b47c5e7076)
+[Subsystems] Discovering subsystems at path C:/Users/Lazi_Boi/Documents/github/AFK-Trial/LOF/Builds/AmbienceReview/AFK-Trial_Data/UnitySubsystems
+[D3D12 Device Filter] Vendor Name: NVIDIA
+[D3D12 Device Filter] Device Name: NVIDIA GeForce GTX 1050
+[D3D12 Device Filter] Driver Version: 31.0.15.3742
+[D3D12 Device Filter] Feature Level: 12.1
+[D3D12 Device Filter] Graphics Memory: 4020 MB
+[D3D12 Device Filter] Processor Count: 8
+[D3D12 Device Filter] Device Type: Discrete
+GfxDevice: creating device client; kGfxThreadingModeSplitJobs
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.1]
+    Renderer:        NVIDIA GeForce GTX 1050 (ID=0x1c8d)
+    Vendor:          NVIDIA
+    VRAM:            4020 MB
+    App VRAM Budget: 3417 MB
+    Driver:          31.0.15.3742
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.355 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+<RI> Initializing input.
+Using Windows.Gaming.Input
+<RI> Input initialized.
+UnloadTime: 13.918700 ms
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+CodeReloadManager destroyed
+GarbageCollector disposing of ComputeBuffer. Please use ComputeBuffer.Release() or .Dispose() to manually release the buffer.
+PlayerConnection::Cleanup##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1795417040592,"processId":2588,"allocatedMemory":319908,"memoryLabels":[{"Default":5248},{"Thread":7616},{"Manager":9254},{"Shader":8},{"GfxDevice":3208},{"GfxThread":24},{"Serialization":728},{"Input":2440},{"ScriptingNativeRuntime":285216},{"BaseObject":4352},{"String":581},{"PoolAlloc":192},{"CodeReload":440},{"CloudService":144},{"WebRequest":3613},{"VR":1928},{"Video":144},{"NativeArray":372},{"Subsystems":96},{"CoreBusinessMetrics":128}]}

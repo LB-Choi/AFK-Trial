@@ -34,6 +34,13 @@ namespace AFKTrial.Editor
                 CheckDungeonResultSave(NewBattle());
                 TrialSettingsChecks.Check(fixture);
                 TrialBossHistoryChecks.Check(fixture);
+                TrialSummonChecks.Check(fixture);
+                TrialGuideChecks.Check(fixture);
+                TrialGoalChecks.Check(fixture);
+                TrialHeroCatalogChecks.Check(TrialData.Load());
+                TrialBossWarningChecks.Check(TrialData.Load());
+                TrialAudioChecks.Check();
+                TrialLifecycleChecks.Check(fixture);
                 CheckRepeatStage(NewBattle());
                 CheckOffAxisApproach(NewBattle());
                 for (int enemySlot = 3; enemySlot < 6; enemySlot++)
@@ -507,6 +514,7 @@ namespace AFKTrial.Editor
             battle.CreditIdle(2 * battle.Data.UpgradeGold, 2 * battle.Data.UpgradeXp);
             Require(battle.UpgradeHero(first.Hero) && battle.HeroLevel(first.Hero) == 3 &&
                 battle.HeroLevel((first.Hero + 1) % battle.Heroes.Count) == 1, "manual and duplicate levels accumulate on the same hero");
+            Require(battle.ConfirmSummons(), "confirm first result before next summon");
             var before = battle.CaptureProgress();
             int missing = battle.Heroes.Count - 1;
             Array.Resize(ref before.heroes, before.heroes.Length - 1);

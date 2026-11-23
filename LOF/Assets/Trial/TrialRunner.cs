@@ -33,7 +33,9 @@ namespace AFKTrial
 
         private void OnEnable()
         {
+            InitializeLifecycle();
             sideBattle = gameObject.scene.name == "SideBattle";
+            ResetGuideUI();
             resultDungeon = null;
             atTitle = true;
             showRecruit = false;
@@ -77,9 +79,14 @@ namespace AFKTrial
 
         private void Update()
         {
-            if (battle == null || progressLock == null || suspended) return;
+            if (Application.isPlaying) EnsureAudio();
+            if (battle == null || progressLock == null) return;
+            if (RefreshLifecycle() || suspended) return;
+            UpdateGuides();
             if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
+            if (GuideOpen) return;
             if (HasPendingIdleReward || HasDungeonResult || showRecruit || SystemMenuOpen || HasBossReview) return;
+            ResumeBattleAfterAway();
             if (battle.Finished)
             {
                 if (battle.ActiveDungeon != null) { ReturnFromDungeon(); return; }
@@ -96,6 +103,7 @@ namespace AFKTrial
                 if (battle.ActiveDungeon != null) ReturnFromDungeon();
                 else
                 {
+                    battle.ObserveGuideConditions();
                     CheckpointProgress(battle.Won);
                     showRecruit = battle.RecruitReward.HasValue;
                     ShowCompletedBoss();
@@ -142,9 +150,20 @@ namespace AFKTrial
                 (Screen.height - height * scale) / 2, 0), Quaternion.identity, Vector3.one * scale);
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
             {
-                if (SystemMenuOpen) BackFromSystemMenu();
+                if (GuideOpen) DismissGuide(true);
+                else if (SystemMenuOpen) BackFromSystemMenu();
                 else if (CanOpenSystemMenu) OpenSystemMenu();
                 Event.current.Use();
+            }
+            if (GuideOpen)
+            {
+                if (Event.current.type == EventType.Repaint)
+                {
+                    if (guideReplay) DrawLiveBattle(width, height);
+                    else DrawGameContent(width, height);
+                }
+                DrawGuide(width, height);
+                return;
             }
             if (SystemMenuOpen)
             {
@@ -202,6 +221,7 @@ namespace AFKTrial
             {
                 OpenProgressSession();
                 atTitle = false;
+                if (battle.PendingSummons != null) { OpenMenu(); featurePage = 1; }
             }
             catch (System.Exception error)
             {
@@ -330,6 +350,10 @@ namespace AFKTrial
                 float headOffset = sideBattle ? (unit.Ally || !string.IsNullOrEmpty(unit.Stats.Animation) ? 56 : 24) : 42;
                 DrawDamage(unit, entry.x, entry.y - headOffset);
             }
+            // Important next-attack information must stay above floating damage numbers.
+            if (sideBattle)
+                foreach (var entry in fieldDrawOrder)
+                    DrawBossWarning(battle.Units[entry.slot], entry.x, entry.y);
         }
 
         private Rect CombatantArea(float x, float y) => sideBattle
@@ -396,13 +420,15 @@ namespace AFKTrial
                 GUI.BeginGroup(dossier);
                 DrawHeroDossier(dossierWidth, dossierHeight);
                 GUI.EndGroup();
-                if (ArcadeTab(new Rect(width / 2f - 235, height - 58, 220, 42), "편성 변경", false))
+                GUI.enabled = battle.Owned(featureHero);
+                if (ArcadeTab(new Rect(width / 2f - 235, height - 58, 220, 42), battle.Owned(featureHero) ? "편성 변경" : "영입 후 편성 가능", false))
                     BeginHeroPlacement();
+                GUI.enabled = true;
                 if (ArcadeTab(new Rect(width / 2f + 15, height - 58, 220, 42), "전투로 돌아가기", true))
                     editing = false;
                 return;
             }
-            if (DrawRosterHeader(width, "보유 영웅", heroesFromMenu ? "기사단 홀" : "전투"))
+            if (DrawRosterHeader(width, "영웅 도감", heroesFromMenu ? "기사단 홀" : "전투"))
             {
                 if (heroesFromMenu) OpenMenu(); else editing = false;
             }
@@ -429,9 +455,9 @@ namespace AFKTrial
                 float x = area.x + ((columns - rowCount) * 0.5f + hero % columns) * (cardWidth + gap);
                 float y = area.y + row * (cardHeight + gap);
                 var card = new Rect(x, y, cardWidth, cardHeight);
-                if (!placing && battle.Owned(hero) && card.Contains(Event.current.mousePosition))
+                if (!placing && card.Contains(Event.current.mousePosition))
                     galleryHero = hero;
-                if (battle.Owned(hero) && GUI.Button(card, GUIContent.none, GUIStyle.none))
+                if ((!placing || battle.Owned(hero)) && GUI.Button(card, GUIContent.none, GUIStyle.none))
                 {
                     if (placing) PlaceHero(hero, selectedSlot);
                     else ShowKnightDossier(hero);
@@ -446,6 +472,7 @@ namespace AFKTrial
 
         private void BeginHeroPlacement()
         {
+            if (!battle.Owned(featureHero)) return;
             for (int slot = 0; slot < draft.Length; slot++) draft[slot] = battle.HeroAt(slot);
             selectedSlot = -1;
             heroView = HeroView.Formation;
@@ -460,6 +487,7 @@ namespace AFKTrial
 
         private void PlaceHero(int hero, int slot)
         {
+            if (!battle.Owned(hero) || slot < 0 || slot >= draft.Length) return;
             int occupied = System.Array.IndexOf(draft, hero);
             if (occupied >= 0) draft[occupied] = draft[slot];
             draft[slot] = hero;

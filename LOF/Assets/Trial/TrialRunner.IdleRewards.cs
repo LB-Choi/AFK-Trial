@@ -54,6 +54,11 @@ namespace AFKTrial
         private void OpenProgressSession()
         {
             string folder = Path.Combine(Application.persistentDataPath, "AFKTrial");
+            OpenProgressSessionAt(folder);
+        }
+
+        private void OpenProgressSessionAt(string folder)
+        {
             Directory.CreateDirectory(folder);
             progressPath = Path.Combine(folder, "progress.json");
             victoryBackupPath = Path.Combine(folder, "last-victory.json");
@@ -118,7 +123,7 @@ namespace AFKTrial
             reward.Gold = (int)Math.Min((long)reward.Gold + gear.ConversionGold, int.MaxValue - battle.Gold);
             reward.Experience = Math.Min(reward.Experience, int.MaxValue - battle.Experience);
             PendingIdleReward = reward;
-            if (!HasPendingIdleReward) pendingSeconds = equipmentSeed = 0;
+            // Keep short visits until they accumulate enough to produce a reward.
         }
 
         private void WriteProgress(TrialBattle.Progress progress, long unclaimedSeconds, bool victory = false)
@@ -179,7 +184,8 @@ namespace AFKTrial
         {
             var pulls = battle.Summon(count, SaveMenuPurchase);
             if (pulls == null) return false;
-            lastPulls = pulls;
+            PlayBattleSound(TrialBattle.SoundCue.Reward);
+
             animationStart = Time.unscaledTime;
             return true;
         }
@@ -190,25 +196,15 @@ namespace AFKTrial
             var reward = PendingIdleReward;
             lastSeenUtc = Math.Max(lastSeenUtc, UtcNow);
             if (!battle.CollectIdle(reward.Gold, reward.Experience, reward.Equipment, progress => TrySaveProgress(progress, 0))) return;
+            PlayBattleSound(TrialBattle.SoundCue.Reward);
             pendingSeconds = equipmentSeed = 0;
             PendingIdleReward = default;
-        }
-
-        private void OnApplicationPause(bool pause)
-        {
-            if (progressLock == null || pause == suspended) return;
-            if (pause) CheckpointProgress();
-            suspended = pause;
-            if (!pause)
-            {
-                CountTimeAway(UtcNow);
-                CheckpointProgress();
-            }
         }
 
         private void OnApplicationQuit() => CloseProgressSession();
         private void OnDisable()
         {
+            ReleaseAudio();
             ReleaseSkillEffects();
             CloseProgressSession();
         }

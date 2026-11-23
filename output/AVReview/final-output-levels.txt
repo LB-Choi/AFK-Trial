@@ -1,0 +1,12 @@
+menu=BossInfo
+elapsed=14.30004
+warning=False
+music=1
+effects=1
+draftMusic=1
+draftEffects=1
+backgroundGain=0.4
+backgroundTime=45.58998
+peak=0.2898399
+rms=0.0178926978615867
+samples=21850112

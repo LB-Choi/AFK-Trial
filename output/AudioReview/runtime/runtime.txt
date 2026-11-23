@@ -1,0 +1,1 @@
+PASS: four cues play on intended AudioSources, volumes applied, mute persisted; background intentionally unassigned. This is not a listening-quality test.

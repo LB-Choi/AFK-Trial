@@ -7,12 +7,13 @@ namespace AFKTrial
 {
     public sealed partial class TrialRunner
     {
-        private enum SystemMenu { Closed, Settings, Help, Information, Reset, Quit }
+        private enum SystemMenu { Closed, Settings, Help, Guides, Information, Reset, Quit, Goals, BossInfo, Audio }
         [Serializable]
         private sealed class DisplaySettings
         {
-            public int version = 1;
+            public int version = 2;
             public bool showDamageNumbers = true;
+            public float musicVolume = .3f, effectsVolume = .65f;
         }
 
         private SystemMenu systemMenu;
@@ -21,20 +22,27 @@ namespace AFKTrial
         private int helpStep;
         private GUIStyle settingsBody;
         private bool SystemMenuOpen => systemMenu != SystemMenu.Closed;
-        private bool CanOpenSystemMenu => !showRecruit && !HasPendingIdleReward && !HasDungeonResult && !HasBossReview;
+        private bool CanOpenSystemMenu => !GuideOpen && !showRecruit && !HasPendingIdleReward && !HasDungeonResult && !HasBossReview;
 
         private void LoadDisplaySettings()
         {
             if (string.IsNullOrEmpty(settingsPath))
                 settingsPath = Path.Combine(Application.persistentDataPath, "AFKTrial", "settings.json");
             showDamageNumbers = true;
+            musicVolume = .3f; effectsVolume = .65f;
             settingsError = null;
             try
             {
                 if (!File.Exists(settingsPath)) return;
                 var saved = JsonUtility.FromJson<DisplaySettings>(File.ReadAllText(settingsPath));
-                if (saved == null || saved.version != 1) throw new InvalidDataException("Unsupported display settings.");
+                if (saved == null || saved.version < 1 || saved.version > 2) throw new InvalidDataException("Unsupported display settings.");
                 showDamageNumbers = saved.showDamageNumbers;
+                if (saved.version >= 2)
+                {
+                    if (float.IsNaN(saved.musicVolume) || float.IsInfinity(saved.musicVolume) ||
+                        float.IsNaN(saved.effectsVolume) || float.IsInfinity(saved.effectsVolume)) throw new InvalidDataException("Invalid volume.");
+                    musicVolume = Mathf.Clamp01(saved.musicVolume); effectsVolume = Mathf.Clamp01(saved.effectsVolume);
+                }
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is ArgumentException)
             {
@@ -43,13 +51,16 @@ namespace AFKTrial
             }
         }
 
-        private bool SetDamageNumbers(bool enabled)
+        private bool SetDamageNumbers(bool enabled) => SaveDisplaySettings(enabled, musicVolume, effectsVolume);
+
+        private bool SaveDisplaySettings(bool enabled, float music, float effects)
         {
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
-                WriteAtomically(settingsPath, Encoding.UTF8.GetBytes(JsonUtility.ToJson(new DisplaySettings { showDamageNumbers = enabled })));
+                WriteAtomically(settingsPath, Encoding.UTF8.GetBytes(JsonUtility.ToJson(new DisplaySettings { showDamageNumbers = enabled, musicVolume = music, effectsVolume = effects })));
                 showDamageNumbers = enabled;
+                musicVolume = music; effectsVolume = effects;
                 settingsError = null;
                 return true;
             }
@@ -69,7 +80,8 @@ namespace AFKTrial
 
         private void BackFromSystemMenu()
         {
-            systemMenu = systemMenu == SystemMenu.Settings ? SystemMenu.Closed : SystemMenu.Settings;
+            if (systemMenu == SystemMenu.Audio && uiAudio != null) uiAudio.Stop();
+            systemMenu = (systemMenu == SystemMenu.Settings || systemMenu == SystemMenu.Goals || systemMenu == SystemMenu.BossInfo) ? SystemMenu.Closed : SystemMenu.Settings;
             resetConfirmation = "";
             GUI.FocusControl(null);
         }
@@ -95,6 +107,8 @@ namespace AFKTrial
             }
             battle.SkillApplied -= PlaySkillEffect;
             battle = fresh;
+            ResetGuideUI();
+            restartAfterAway = applicationPaused = false;
             battle.SkillApplied += PlaySkillEffect;
             playingSkills.Clear();
             pendingSeconds = equipmentSeed = 0;
@@ -108,7 +122,7 @@ namespace AFKTrial
             heroView = HeroView.Menu;
             selectedDungeon = null;
             selectedGear = pendingSale = null;
-            lastPulls = null;
+
             selectedSkill = -1;
             featureHero = selectedSlot = dungeonDifficulty = inventoryPage = 0;
             gearFilter = -1;
@@ -143,6 +157,9 @@ namespace AFKTrial
 
         private void DrawSystemMenu(int width, int height)
         {
+            if (systemMenu == SystemMenu.Audio) { DrawAudioSettings(width, height); return; }
+            if (systemMenu == SystemMenu.BossInfo) { DrawBossInformation(width, height); return; }
+            if (systemMenu == SystemMenu.Goals) { DrawGoals(width, height); return; }
             if (settingsBody == null)
                 settingsBody = new GUIStyle(small) { fontSize = 17, wordWrap = true, alignment = TextAnchor.UpperLeft };
             if (systemMenu == SystemMenu.Help) { DrawSpotlightHelp(width, height); return; }
@@ -150,7 +167,7 @@ namespace AFKTrial
             const float panelWidth = 464, panelHeight = 490;
             GUI.BeginGroup(new Rect((width - panelWidth) / 2, (height - panelHeight) / 2, panelWidth, panelHeight));
             DrawKnightPanel(new Rect(0, 0, panelWidth, panelHeight));
-            string heading = systemMenu == SystemMenu.Settings ? "설정" : systemMenu == SystemMenu.Information ? "게임 정보" :
+            string heading = systemMenu == SystemMenu.Settings ? "설정" : systemMenu == SystemMenu.Information ? "게임 정보" : systemMenu == SystemMenu.Guides ? "상황별 안내 다시 보기" :
                 systemMenu == SystemMenu.Reset ? "진행을 초기화할까요?" : "게임을 종료할까요?";
             CourtHeading(new Rect(24, 14, 360, 42), heading, 29, TextAnchor.MiddleLeft);
             ArcadeText(new Rect(25, 58, 410, 23), atTitle ? "AFK Trial" : "전투 일시정지", 13, HallAmber, TextAnchor.MiddleLeft);
@@ -168,9 +185,13 @@ namespace AFKTrial
                 if (GUI.Button(new Rect(26, 243, 200, 43), "진행 초기화", button)) { systemMenu = SystemMenu.Reset; resetConfirmation = ""; settingsError = null; }
                 GUI.enabled = true;
                 if (GUI.Button(new Rect(238, 243, 200, 43), "게임 종료", button)) { systemMenu = SystemMenu.Quit; settingsError = null; }
-                GUI.Label(new Rect(26, 306, 412, 47), atTitle ? "게임에 진입하면 도움말과 진행 초기화를 사용할 수 있습니다." :
-                    "설정을 닫으면 같은 전투가 이어집니다.\n다른 메뉴에서도 Esc 키로 설정을 열 수 있습니다.", settingsBody);
+                GUI.enabled = !atTitle;
+                if (GUI.Button(new Rect(26, 300, 412, 43), "도움말 / 상황별 최초 안내", button)) systemMenu = SystemMenu.Guides;
+                GUI.enabled = true;
+                if (GUI.Button(new Rect(26, 354, 412, 35), "소리 설정 / 배경음·효과음", button))
+                { draftMusic = musicVolume; draftEffects = effectsVolume; audioSaveNotice = null; systemMenu = SystemMenu.Audio; }
             }
+            else if (systemMenu == SystemMenu.Guides) DrawGuideList();
             else if (systemMenu == SystemMenu.Information)
             {
                 GUI.Label(new Rect(26, 109, 412, 275), "AFK Trial  /  " + Application.version +

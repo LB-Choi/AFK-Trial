@@ -72,6 +72,9 @@ namespace AFKTrial
                 if (GUI.Button(new Rect(action.x - 90, action.y, 84, 38), "퇴각", button)) battle.RetreatFromDungeon();
             }
             if (GUI.Button(action, "•••", button)) OpenSystemMenu();
+            DrawGoalTracker(new Rect(14, 74, sideBattle ? 400 : width - 140, 30));
+            if (sideBattle && boss != null && GUI.Button(new Rect(430, 74, 180, 30), "보스 기술 안내", button) && CanOpenSystemMenu)
+                systemMenu = SystemMenu.BossInfo;
             DrawTimer(sideBattle ? new Rect(wallet.x - 98, 13, 92, 34) : new Rect(width - 112, 55, 100, 33));
             GUI.EndGroup();
         }

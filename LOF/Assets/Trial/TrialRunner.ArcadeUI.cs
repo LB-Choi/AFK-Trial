@@ -50,7 +50,7 @@ namespace AFKTrial
             float bottom = height - HallDockHeight(!wide) - 10;
             var portraitArea = wide ? new Rect(20, 73, 232, bottom - 73)
                 : new Rect(20, 74, width - 40, 168);
-            if (!battle.Owned(galleryHero)) galleryHero = battle.FirstDeployedHero;
+            if (galleryHero < 0 || galleryHero >= battle.Heroes.Count) galleryHero = battle.FirstDeployedHero;
             int hero = galleryHero;
             GUI.BeginGroup(portraitArea);
             var area = new Rect(0, 0, portraitArea.width, portraitArea.height);
@@ -72,11 +72,11 @@ namespace AFKTrial
             float y = wide ? area.height - 117 : 21;
             float textWidth = wide ? area.width - 30 : area.width * 0.47f;
             ArcadeText(new Rect(15, y, textWidth, 20),
-                RoleKorean(battle.Data.Heroes[hero].Role) + "    /    레벨 " + battle.HeroLevel(hero),
+                RoleKorean(battle.Data.Heroes[hero].Role) + (battle.Owned(hero) ? "    /    레벨 " + battle.HeroLevel(hero) : "    /    미보유"),
                 12, FrameLight, TextAnchor.MiddleLeft);
             CourtHeading(new Rect(15, y + 20, textWidth, 34), battle.Heroes[hero], 27, TextAnchor.MiddleLeft);
             var stats = battle.HeroStats(hero);
-            ArcadeText(new Rect(15, y + 55, textWidth, 22), $"체력 {stats.hp:0}   공격력 {stats.attack:0}",
+            ArcadeText(new Rect(15, y + 55, textWidth, 22), battle.Owned(hero) ? $"체력 {stats.hp:0}   공격력 {stats.attack:0}" : "역할 · 스킬 · 획득 경로 확인",
                 14, Parchment, TextAnchor.MiddleLeft);
             CourtRule(new Rect(16, y + 84, Mathf.Min(150, textWidth - 6), 1), FrameGold);
             ArcadeText(new Rect(15, y + 87, textWidth, 22), "상세 정보   ›", 13, FrameLight, TextAnchor.MiddleLeft);
@@ -145,7 +145,7 @@ namespace AFKTrial
             ManuscriptFade(new Rect(0, area.height - shadeHeight, area.width, shadeHeight),
                 Color.clear, new Color32(6, 12, 22, 253));
             CourtHeading(new Rect(4, area.height - 29, area.width - 8, 27),
-                owned ? battle.Heroes[hero] : "잠김", area.width < 139 ? 16 : 18, TextAnchor.MiddleCenter);
+                battle.Heroes[hero], area.width < 139 ? 16 : 18, TextAnchor.MiddleCenter);
             if (owned)
             {
                 ManuscriptFade(new Rect(0, 0, area.width, 33), new Color32(9, 17, 28, 194), Color.clear);
@@ -155,6 +155,7 @@ namespace AFKTrial
                 if (deployedSlot >= 0)
                     GUI.DrawTexture(new Rect(4, 24, 23, 27), deploymentBadges[deployedSlot], ScaleMode.ScaleToFit);
             }
+            else ArcadeText(new Rect(7, 3, area.width - 14, 20), "미보유 · 상세", 12, FrameLight, TextAnchor.MiddleLeft);
             if (selected)
             {
                 CourtGem(new Vector2(area.center.x, 4), 4, FrameLight);

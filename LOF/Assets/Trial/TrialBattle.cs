@@ -8,6 +8,8 @@ namespace AFKTrial
     public sealed partial class TrialBattle
     {
         public readonly TrialData Data;
+        public enum SoundCue { Hit, BossWarning, BossSpecial, Reward }
+        public event Action<SoundCue> SoundRequested;
         public readonly IReadOnlyList<string> Heroes;
         private readonly int[] formation;
         public bool BossStage => ActiveStage > 0 && ActiveStage % Data.BossEvery == 0;
@@ -58,6 +60,8 @@ namespace AFKTrial
             internal Vector2? Waypoint;
             public int HeroIndex = -1;
             public bool Walking, WindingUp;
+            public bool SpecialAttackPending { get; internal set; }
+            public float SpecialWarningStarted { get; internal set; }
             public float SwingStart = float.NegativeInfinity;
             public float LastHitTime = float.NegativeInfinity;
             public float LastDamage, LastHitHeight;
@@ -164,7 +168,7 @@ namespace AFKTrial
                 GoldReward = AddCurrency(GoldReward, balance - Gold);
                 Gold = balance;
             }
-            else inventory.Add(new Item(GearReward));
+            else { inventory.Add(new Item(GearReward)); QueueGuide(Guide.Equipment); }
         }
 
         public sealed class IdleEquipment
@@ -212,10 +216,13 @@ namespace AFKTrial
             int index = progress.inventory.Length;
             Array.Resize(ref progress.inventory, index + equipment.Items.Count);
             foreach (var item in equipment.Items) progress.inventory[index++] = CaptureItem(item);
+            progress.guideReady |= 1 << (int)Guide.Idle;
+            if (equipment.Items.Count > 0) progress.guideReady |= 1 << (int)Guide.Equipment;
             if (!save(progress)) return false;
             Gold = progress.gold;
             Experience = progress.experience;
             inventory.AddRange(equipment.Items);
+            guideReady = progress.guideReady;
             return true;
         }
 
@@ -225,6 +232,7 @@ namespace AFKTrial
             var previous = Equipped(hero, item.Gear.Slot);
             if (previous != null) previous.Owner = -1;
             item.Owner = hero;
+            completedGoals |= 1 << 1;
             return true;
         }
 
@@ -340,13 +348,13 @@ namespace AFKTrial
 
         public Pull[] Summon(int count, Func<Progress, bool> save = null)
         {
-            if ((count != 1 && count != 10) || Tickets < count) return null;
+            if ((count != 1 && count != 10) || Tickets < count || pendingSummons != null) return null;
             var pulls = new Pull[count];
             var levels = (int[])heroLevels.Clone();
             int streak = duplicateStreak;
             for (int i = 0; i < count; i++)
             {
-                int hero = UnityEngine.Random.Range(0, heroLevels.Length);
+                int hero = RollSummonHero(UnityEngine.Random.value);
                 if (streak >= 9)
                 {
                     var missing = new List<int>();
@@ -358,9 +366,11 @@ namespace AFKTrial
                 streak = !isNew && Array.IndexOf(levels, 0) >= 0 ? streak + 1 : 0;
                 pulls[i] = new Pull { Hero = hero, IsNew = isNew, Level = levels[hero] };
             }
+            var records = Array.ConvertAll(pulls, p => new SummonReceipt { heroId = Data.Heroes[p.Hero].Id, level = p.Level, isNew = p.IsNew });
             if (save != null)
             {
                 var progress = CaptureProgress(levels);
+                progress.pendingSummons = records;
                 progress.tickets -= count;
                 progress.duplicateStreak = streak;
                 if (!save(progress)) return null;
@@ -370,6 +380,7 @@ namespace AFKTrial
             Array.Copy(levels, heroLevels, levels.Length);
             Tickets -= count;
             duplicateStreak = streak;
+            pendingSummons = records;
             return pulls;
         }
 
@@ -388,6 +399,7 @@ namespace AFKTrial
         }
 
         public void StartBattle() => StartEncounter(null);
+        public void RestartCurrentEncounter() { if (!Finished) StartEncounter(ActiveDungeon); }
 
         public bool TryStartDungeon(TrialData.DungeonKind kind, int tierIndex)
         {
@@ -510,6 +522,18 @@ namespace AFKTrial
                 }
                 if (inReach && !unit.Walking && speed > 0f && unit.Cooldown <= 0)
                 {
+                    if (unit == ActiveBoss && unit.Stats.SkillEvery > 0 && !unit.SpecialAttackPending &&
+                        (unit.Attacks + 1) % unit.Stats.SkillEvery == 0)
+                    {
+                        // Spend this attack opportunity on a warning, without a swing, hit or attack count.
+                        unit.SpecialAttackPending = true;
+                        SoundRequested?.Invoke(SoundCue.BossWarning);
+                        unit.SpecialWarningStarted = Elapsed;
+                        unit.Cooldown = unit.Stats.Interval;
+                        unit.WindingUp = false;
+                        unit.SwingStart = float.NegativeInfinity;
+                        continue;
+                    }
                     float impact = unit.Stats.ImpactSeconds;
                     if (impact > 0)
                     {
@@ -523,6 +547,7 @@ namespace AFKTrial
                         unit.WindingUp = false;
                     }
                     if (unit.Skills.BlindUntil <= Elapsed) BasicStrike(unit, hits);
+                    unit.SpecialAttackPending = false;
                     if (unit.Skills.Taunter != null && unit.Skills.TauntUntil == 0f) { unit.Skills.Taunter = null; unit.Target = null; }
                     unit.Cooldown = Mathf.Max(0, unit.Stats.Interval - impact / unit.SwingSpeed * speed);
                     unit.Attacks++;
@@ -563,10 +588,13 @@ namespace AFKTrial
             if (Finished) return;
             Finished = true;
             Won = won;
+            if (won) SoundRequested?.Invoke(SoundCue.Reward);
             CompleteBossAttempt();
+            if (!won && CompletedBossAttempt != null && !ActiveFarming) QueueGuide(Guide.BossDefeat);
             foreach (var unit in Units)
             {
                 unit.Walking = false;
+                unit.SpecialAttackPending = false;
                 // Let attacks that already hit finish their recovery animation.
                 if (unit.WindingUp) unit.SwingStart = float.NegativeInfinity;
                 unit.WindingUp = false;

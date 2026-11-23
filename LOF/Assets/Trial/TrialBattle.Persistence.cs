@@ -31,6 +31,8 @@ namespace AFKTrial
         public sealed class Progress
         {
             public int highest, stage, gold, experience, tickets, duplicateStreak;
+            public int completedGoals;
+            public int guideVersion, guideReady, guideSeen, guideSkipped;
             // The version 1 save format requires a positive team baseline. Hero records carry absolute levels.
             public int level = 1;
             public int goldVaultClears, experienceArchiveClears, repeatStage;
@@ -39,6 +41,7 @@ namespace AFKTrial
             public HeroProgress[] heroes;
             public GearProgress[] inventory;
             public BossAttempt[] bossHistory;
+            public SummonReceipt[] pendingSummons;
         }
 
         [Serializable]
@@ -80,18 +83,20 @@ namespace AFKTrial
             for (int i = 0; i < items.Length; i++)
                 items[i] = CaptureItem(inventory[i]);
             return new Progress {
+                completedGoals = CompletedGoals,
+                guideVersion = 1, guideReady = guideReady, guideSeen = guideSeen, guideSkipped = guideSkipped,
                 highest = Highest, stage = Stage, farming = Farming, gold = Gold, repeatStage = RepeatStage,
                 experience = Experience, tickets = Tickets, duplicateStreak = duplicateStreak,
                 goldVaultClears = clearedDungeonTiers[(int)TrialData.DungeonKind.GoldVault],
                 experienceArchiveClears = clearedDungeonTiers[(int)TrialData.DungeonKind.ExperienceArchive],
                 formation = Array.ConvertAll(formation, index => index < 0 ? "" : Data.Heroes[index].Id),
-                heroes = heroes.ToArray(), inventory = items, bossHistory = BossHistory
+                heroes = heroes.ToArray(), inventory = items, bossHistory = BossHistory, pendingSummons = CopyReceipts(pendingSummons)
             };
         }
 
         public bool RestoreProgress(Progress saved)
         {
-            if (saved == null || saved.highest < 0 || saved.highest == int.MaxValue || saved.stage < 0 ||
+            if (saved == null || (saved.completedGoals & ~GoalMask) != 0 || !ValidGuides(saved) || saved.highest < 0 || saved.highest == int.MaxValue || saved.stage < 0 ||
                 (saved.farming ? saved.stage > saved.highest : saved.stage != saved.highest + 1) ||
                 saved.repeatStage < 0 || saved.repeatStage > saved.highest ||
                 saved.level < 1 || saved.gold < 0 || saved.experience < 0 || saved.tickets < 0 ||
@@ -110,6 +115,7 @@ namespace AFKTrial
                 if (index < 0 || roster[index] != null) return false;
                 roster[index] = hero;
             }
+            if (!ValidSummonReceipts(saved.pendingSummons, roster)) return false;
             var party = Array.ConvertAll(saved.formation, id => Data.Heroes.FindIndex(hero => hero.Id == id));
             var deployed = new HashSet<int>();
             for (int i = 0; i < party.Length; i++)
@@ -144,6 +150,9 @@ namespace AFKTrial
                 items.Add(new Item(definition) { Owner = owner, Enhancement = gear.enhancement });
             }
 
+            completedGoals = saved.completedGoals;
+            RestoreGuides(saved);
+            pendingSummons = CopyReceipts(saved.pendingSummons);
             Highest = saved.highest;
             RepeatStage = saved.repeatStage;
             Stage = saved.stage;
@@ -164,6 +173,7 @@ namespace AFKTrial
             Array.Copy(party, formation, party.Length);
             inventory.Clear();
             inventory.AddRange(items);
+            completedGoals = CompletedGoals;
             bossHistory.Clear();
             if (saved.bossHistory != null) bossHistory.AddRange(Array.ConvertAll(saved.bossHistory, item => item.Copy()));
             StartBattle();

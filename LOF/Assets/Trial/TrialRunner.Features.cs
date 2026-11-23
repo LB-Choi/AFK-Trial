@@ -25,7 +25,7 @@ namespace AFKTrial
         private int dungeonDifficulty;
         private int selectedSkill = -1;
         private Vector2 skillScroll;
-        private TrialBattle.Pull[] lastPulls;
+        private TrialBattle.Pull[] lastPulls => battle.PendingSummons;
         private float animationStart = float.NegativeInfinity;
 
         private Texture2D FeatureTexture(string key)
@@ -170,6 +170,8 @@ namespace AFKTrial
             DrawWallet(new Rect(wallet.x + 9, wallet.y + 2, wallet.width - 14, 33));
             if (GUI.Button(new Rect(width - 142, 62, 124, 36), "설정", button)) OpenSystemMenu();
 
+            DrawGoalTracker(new Rect(18, 106, Mathf.Min(width - 36, 410), 36));
+
             int featured = battle.HeroAt(1) >= 0 ? battle.HeroAt(1) : battle.FirstDeployedHero;
             var hero = battle.Data.Heroes[featured];
             ManuscriptFade(new Rect(0, dockTop - 150, width, 150),
@@ -302,6 +304,7 @@ namespace AFKTrial
 
         private void DrawHeroDossier(float width, float height)
         {
+            if (!battle.Owned(featureHero)) { DrawUnownedHeroDossier(width, height); return; }
             bool tall = height > width;
             var hero = battle.Data.Heroes[featureHero];
             int level = battle.HeroLevel(featureHero);
@@ -433,19 +436,20 @@ namespace AFKTrial
         {
             int slot = selectedSkill;
             var skill = battle.Data.Skills[featureHero, slot];
-            int level = battle.SkillLevel(featureHero, slot);
+            bool owned = battle.Owned(featureHero);
+            int level = owned ? battle.SkillLevel(featureHero, slot) : 1;
             var panel = new Rect(0, 0, width, 392);
             InventoryBox(panel, InventoryPanel, InventoryGold);
             GUI.Label(new Rect(16, 13, width - 68, 31), skill.Name, label);
             if (GUI.Button(new Rect(width - 66, 12, 50, 30), "닫기", button)) selectedSkill = -1;
             string trigger = slot == 0 ? "기본 공격 " + skill.Interval + "회마다 발동" : skill.Interval + "초마다 발동";
             ArcadeText(new Rect(16, 49, width - 32, 23), trigger, 14, BodyInk, TextAnchor.MiddleLeft);
-            bool hasNext = level > 0 && level < int.MaxValue;
+            bool hasNext = owned && level > 0 && level < int.MaxValue;
             var current = battle.SkillPreview(featureHero, slot, Math.Max(1, level));
             var next = hasNext ? battle.SkillPreview(featureHero, slot, level + 1) : current;
             float valueX = width * .44f, valueWidth = (width - valueX - 16) / 2;
-            ArcadeText(new Rect(valueX, 81, valueWidth, 23), "현재 레벨 " + level, 14, BodyInk, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(valueX + valueWidth, 81, valueWidth, 23), hasNext ? "강화 후 레벨 " + (level + 1) : "최대", 14, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(valueX, 81, valueWidth, 23), owned ? "현재 레벨 " + level : "영입 시 레벨 1", 14, BodyInk, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(valueX + valueWidth, 81, valueWidth, 23), !owned ? "미리 보기" : hasNext ? "강화 후 레벨 " + (level + 1) : "최대", 14, HallAmber, TextAnchor.MiddleLeft);
             bool unchanged = true;
             for (int i = 0; i < current.Count; i++)
             {
@@ -465,13 +469,13 @@ namespace AFKTrial
             GUI.Label(new Rect(0, 0, detailWidth, detailHeight), details, small);
             GUI.EndScrollView();
             long cost = battle.SkillCost(featureHero, slot);
-            string status = level == int.MaxValue ? "최대 강화" : level >= battle.HeroLevel(featureHero)
+            string status = !owned ? "미보유 영웅입니다. 영입 후 스킬을 강화할 수 있습니다." : level == int.MaxValue ? "최대 강화" : level >= battle.HeroLevel(featureHero)
                 ? $"영웅 {level + 1}레벨 이상 필요" : $"보유 골드 {battle.Gold:N0} / 필요 {cost:N0}";
             GUI.Label(new Rect(16, 277, width - 32, 34), idleSaveError == null ? status : "저장 실패: 저장 공간을 확인한 후 다시 시도해 주세요.", small);
             GUI.enabled = battle.CanTrain(featureHero, slot);
-            if (GUI.Button(new Rect(16, 316, width - 32, 40), $"강화  /  {cost:N0} 골드", button)) TryTrainSkill(featureHero, slot);
+            if (GUI.Button(new Rect(16, 316, width - 32, 40), owned ? $"강화  /  {cost:N0} 골드" : "영입 후 강화 가능", button)) TryTrainSkill(featureHero, slot);
             GUI.enabled = true;
-            ArcadeText(new Rect(16, 361, width - 32, 25), "변경된 효과는 다음 전투부터 적용됩니다.", 14, HallAmber, TextAnchor.MiddleCenter);
+            ArcadeText(new Rect(16, 361, width - 32, 25), owned ? "변경된 효과는 다음 전투부터 적용됩니다." : "영입 시 스킬 1레벨 기준입니다.", 14, HallAmber, TextAnchor.MiddleCenter);
         }
         private bool showSynergyEffects;
         private void OpenFeature(int page)
@@ -553,13 +557,7 @@ namespace AFKTrial
             CourtRule(new Rect(0, art.yMax, width, 1), HallLine);
             if (lastPulls == null)
             {
-                var caption = new Rect(0, art.yMax - 102, portraitLayout ? width : width * 0.52f, 102);
-                ManuscriptFade(new Rect(0, art.yMax - 148, width, 148), new Color32(14, 17, 29, 0), HallInk);
-                CourtRule(new Rect(23, caption.y + 8, 69, 1), HallAmber);
-                CourtHeading(new Rect(21, caption.y + 13, caption.width - 34, 43),
-                    "기사의 맹세", 34, TextAnchor.MiddleLeft);
-                GUI.Label(new Rect(23, caption.y + 53, caption.width - 40, 45),
-                    "소환권 1장으로 영웅 1명을 소환합니다. 중복 영웅은 레벨이 1 오릅니다.", small);
+                DrawSummonInformation(art);
             }
             else
             {
@@ -586,7 +584,7 @@ namespace AFKTrial
                     Fill(new Rect(footer.x, footer.y, footer.width, 1), InventoryGold);
                     GUI.Label(new Rect(footer.x, footer.y + 3, footer.width, 21), battle.Heroes[pull.Hero], summonName);
                     GUI.Label(new Rect(footer.x, footer.y + 24, footer.width, 17),
-                        pull.IsNew ? "신규 영입!" : "레벨 +1 / 현재 " + pull.Level, summonLevel);
+                        pull.IsNew ? "신규 영입!" : "소환 후 레벨 " + pull.Level, summonLevel);
                 }
             }
             if (!string.IsNullOrEmpty(idleSaveError))
@@ -601,6 +599,12 @@ namespace AFKTrial
             float buttonWidth = portraitLayout ? (width - 48) / 2 : 174;
             float buttonX = width - 18 - 2 * buttonWidth - 12;
             float buttonY = art.yMax + (portraitLayout ? 40 : 11);
+            if (lastPulls != null)
+            {
+                if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth * 2 + 12, 45), "결과 확인 (이미 지급됨)", button))
+                    battle.ConfirmSummons(SaveMenuPurchase);
+                return;
+            }
             DrawPullButton(new Rect(buttonX, buttonY, buttonWidth, 45), 1);
             DrawPullButton(new Rect(buttonX + 12 + buttonWidth, buttonY, buttonWidth, 45), 10);
         }

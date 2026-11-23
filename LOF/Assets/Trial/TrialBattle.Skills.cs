@@ -68,8 +68,9 @@ namespace AFKTrial
         {
             var target = caster.Target;
             int every = caster.Stats.SkillEvery;
-            bool special = every > 0 && caster == ActiveBoss && (caster.Attacks + 1) % every == 0;
+            bool special = every > 0 && caster == ActiveBoss && caster.SpecialAttackPending;
             bool bash = special && caster.Stats.Id == "boss";
+            SoundRequested?.Invoke(special ? SoundCue.BossSpecial : SoundCue.Hit);
             int round = ActiveStage > 0 ? (ActiveStage - 1) / Data.RoundLength + 1 : 1;
             Strike(caster, target, AttackPower(caster) * (bash ? round : 1), hits);
             if (!special) return;
