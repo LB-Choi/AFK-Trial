@@ -1,0 +1,12 @@
+menu=Settings
+elapsed=4.549999
+warning=True
+music=0.3
+effects=0.65
+draftMusic=0
+draftEffects=0.65
+backgroundGain=0.03
+backgroundTime=51.21163
+peak=0.1400467
+rms=0.00706914568599952
+samples=30767104

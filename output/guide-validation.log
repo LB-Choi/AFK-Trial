@@ -1,0 +1,401 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.5/staging' branch; Version is '6000.5.0f1 (88b47c5e7076) revision 8959100'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Lazi_Boi" at "2026-11-22T06:59:55.8190406Z"
+OS: 'Windows 11  (10.0.26200) Core' Language: 'ko' Physical Memory: 8101 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-11-22T06:59:55Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Unity.exe
+-batchmode
+-nographics
+-quit
+-projectPath
+C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~
+-executeMethod
+AFKTrial.Editor.TrialChecks.Run
+-logFile
+C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\guide-validation.log
+Successfully changed project path to: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~
+C:/Users/Lazi_Boi/Documents/github/AFK-Trial/output/GuideValidation~
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=0"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.Player connection [22452]  Target information:
+
+Player connection [22452]  * "[IP] 148.185.122.101 [Port] 55505 [Flags] 2 [Guid] 1918383263 [EditorId] 1918383263 [Version] 1048832 [Id] WindowsEditor(7,laziboi) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [22452] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [22452] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 21168, path: "C:/Program Files/WindowsApps/UnityTechnologies.UnityHub_4.0.1.65535_x64__2vrhnee42bhxm/app/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.19.0+4cc3dda
+  Session Id:              2778f5fed8074123a782ae5b58a8cdea
+  Correlation Id:          54abe0f1be693818c3a988703cfcdd06
+  External correlation Id: 5824072043190005111
+  Machine Id:              7Y069nNgnULExvYJogimFXfu2Qc=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-Lazi_Boi" (connect: 0.00s, validation: 0.00s, handshake: 0.19s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-Lazi_Boi-notifications" at "2026-11-22T06:59:56.0083225Z"
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 14569455510059-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.20s
+[Package Manager] Connected to IPC stream "Upm-24788" after 0.4 seconds.
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Initialize engine version: 6000.5.0f1 (88b47c5e7076)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.5.0f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/Lazi_Boi/Documents/github/AFK-Trial/output/GuideValidation~/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.5.0f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.5.0f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = 'C:/Program Files/Unity/Hub/Editor/6000.5.0f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.5.0f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56788
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.0f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.005053 seconds.
+Native extension for WindowsStandalone target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.656 seconds
+Domain Reload Profiling: 1764ms
+	BeginReloadAssembly (236ms)
+		CreateAndSetChildDomain (5ms)
+	RebuildCommonClasses (13ms)
+	RebuildNativeTypeToScriptingClass (43ms)
+	initialDomainReloadingComplete (173ms)
+	LoadAllAssembliesAndSetupDomain (637ms)
+		LoadAssemblies (227ms)
+		AnalyzeDomain (508ms)
+			TypeCache.Refresh (505ms)
+				TypeCache.ScanAssembly (475ms)
+	FinalizeReload (661ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (156ms)
+			ProcessInitializeOnLoadAttributes (152ms)
+			ProcessInitializeOnLoadMethodAttributes (226ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 36 packages:
+  Built-in packages:
+    com.unity.modules.tilemap@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.tilemap)
+    com.unity.modules.screencapture@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.ai@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.ai)
+    com.unity.modules.vectorgraphics@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.vectorgraphics)
+    com.unity.modules.cloth@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.cloth)
+    com.unity.modules.ui@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.unitywebrequesttexture)
+    com.unity.modules.assetbundle@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.assetbundle)
+    com.unity.modules.physicscore2d@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.physicscore2d)
+    com.unity.modules.audio@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.xr@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.xr)
+    com.unity.modules.androidjni@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.androidjni)
+    com.unity.modules.animation@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.vehicles@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.vehicles)
+    com.unity.modules.umbra@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.umbra)
+    com.unity.modules.imageconversion@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.unitywebrequestaudio)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.adaptiveperformance)
+    com.unity.modules.director@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.director)
+    com.unity.modules.video@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.accessibility@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.accessibility)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.unitywebrequestwww)
+    com.unity.modules.imgui@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.uielements@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.particlesystem@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle)
+    com.unity.modules.unitywebrequest@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.unityanalytics@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.unityanalytics)
+    com.unity.modules.physics2d@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.physics2d)
+    com.unity.modules.physics@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.physics)
+    com.unity.modules.wind@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.wind)
+    com.unity.modules.terrain@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.terrainphysics)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.hierarchycore@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.modules.subsystems@1.0.0 (location: C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\GuideValidation~\Library\PackageCache\com.unity.modules.subsystems)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.03 seconds
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/Lazi_Boi/Documents/github/AFK-Trial/output/GuideValidation~
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 5s998ms
+[161/167    5s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp.dll (+2 others)
+Assets\Trial\TrialRunner.cs(30,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+[165/167    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[166/167    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+*** Tundra build success (5.84 seconds), 3 items updated, 167 evaluated
+Assets\Trial\TrialRunner.cs(30,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Total cache size 74002156
+Total cache size after purge 74002156, took 00:00:00.2050557
+AssetDatabase: script compilation time: 7.382178s
+Begin MonoManager ReloadAssembly
+Native extension for WindowsStandalone target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  1.606 seconds
+Domain Reload Profiling: 2635ms
+	BeginReloadAssembly (532ms)
+		DisableScriptedObjects (42ms)
+		CreateAndSetChildDomain (112ms)
+	RebuildCommonClasses (28ms)
+	RebuildNativeTypeToScriptingClass (35ms)
+	initialDomainReloadingComplete (124ms)
+	LoadAllAssembliesAndSetupDomain (301ms)
+		LoadAssemblies (238ms)
+		AnalyzeDomain (37ms)
+			TypeCache.Refresh (17ms)
+			BuildScriptInfoCaches (14ms)
+	FinalizeReload (1614ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (6ms)
+			BeforeProcessingInitializeOnLoad (386ms)
+			ProcessInitializeOnLoadAttributes (257ms)
+			ProcessInitializeOnLoadMethodAttributes (320ms)
+			AfterProcessingInitializeOnLoad (23ms)
+		AwakeInstancesAfterBackupRestoration (90ms)
+Starting new worker id: 0 with log in C:/Users/Lazi_Boi/Documents/github/AFK-Trial/output/GuideValidation~/Logs/AssetImportWorkerHW0.log
+
+Asset Pipeline Refresh (id=b1e6d45973dc00548b53007c0f225ffc): Total: 10.623 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=1822 ms
+		Asset DB Callback time: managed=242 ms, native=50 ms
+		Scripting: domain reloads=1, domain reload time=1107 ms, compile time=7390 ms, other=10 ms
+		Project Asset Count: scripts=112, non-scripts=61
+		Asset File Changes: new=0, changed=1, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 43.140ms
+	ApplyChangesToAssetFolders: 0.739ms
+	Scan: 44.422ms
+	Collect global state as custom dependencies: 4.548ms
+	OnSourceAssetsModified: 1.075ms
+	CategorizeScriptCompilationAssets: 0.270ms
+	ProcessAssetsWithTransientArtifactChanges: 2.267ms
+	CategorizeAssets: 2.820ms
+	CompileScripts: 7389.781ms
+	ImportOutOfDateAssets: 1671.508ms (1624.270ms without children)
+		UnloadImportedAssets: 0.343ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.100ms
+		ImportSchedulerStart: 46.790ms
+	PostProcessAllAssets: 246.160ms
+		VCAutoAddAssetPostprocess 3.614ms
+		PostProcessCallbackCreateDeferredMaterials 0.060ms
+		MonoPostProcessAllAssets: 241.114ms
+			AssetPostprocessor.OnPostprocessAllAssets 56.759ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 46.965ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 37.980ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 26.705ms
+			AssetChangedListener.OnPostprocessAllAssets 8.160ms
+			SyncVS.PostprocessSyncProject 6.086ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 4.633ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 2.640ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 1.992ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 1.662ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 1.343ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 1.255ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 1.027ms
+			AssetEvents.OnPostprocessAllAssets 0.840ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.662ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.648ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.555ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.536ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.480ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.271ms
+	PostAssetChangesProfiler: 6.812ms
+	UnloadStreamsBegin: 2.522ms
+	Untracked: 1188.209ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 3.591ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-GuideValidation~
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 55 unused Assets / (0.5 MB). Loaded Objects now: 689.
+Memory consumption went from 189.5 MB to 189.0 MB.
+Total: 15.837100 ms (FindLiveObjects: 0.256200 ms CreateObjectMapping: 0.034000 ms MarkObjects: 14.964200 ms  DeleteObjects: 0.570200 ms)
+
+진행을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요. Sharing violation on path C:\Users\Lazi_Boi\AppData\Local\Temp\DefaultCompany\GuideValidation~\dungeon-result-84152262-7c44-4b7c-bd65-e1637e8b49ec.json.tmp
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+AFKTrial.TrialRunner:TrySaveProgress (AFKTrial.TrialBattle/Progress,long,bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:156)
+AFKTrial.TrialRunner:CheckpointProgress (bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:165)
+AFKTrial.TrialRunner:ReturnFromDungeon () (at Assets/Trial/TrialRunner.DungeonResult.cs:22)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+AFKTrial.Editor.TrialChecks:<CheckDungeonResultSave>g__Call|8_2 (string,object[],AFKTrial.Editor.TrialChecks/<>c__DisplayClass8_0&) (at Assets/Editor/TrialChecks.cs:400)
+AFKTrial.Editor.TrialChecks:CheckDungeonResultSave (AFKTrial.TrialBattle) (at Assets/Editor/TrialChecks.cs:407)
+AFKTrial.Editor.TrialChecks:Run () (at Assets/Editor/TrialChecks.cs:34)
+
+(Filename: Assets/Trial/TrialRunner.IdleRewards.cs Line: 156)
+
+진행을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요. Sharing violation on path C:\Users\Lazi_Boi\AppData\Local\Temp\DefaultCompany\GuideValidation~\afk-settings-3ce9d9a6-01ad-4b09-aae4-63c3b098fa1a\progress.json.tmp
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+AFKTrial.TrialRunner:TrySaveProgress (AFKTrial.TrialBattle/Progress,long,bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:156)
+AFKTrial.TrialRunner:CheckpointProgress (bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:165)
+AFKTrial.TrialRunner:SaveBeforeQuit () (at Assets/Trial/TrialRunner.Settings.cs:129)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+AFKTrial.Editor.TrialSettingsChecks:<Check>g__Call|2_2 (string,object[],AFKTrial.Editor.TrialSettingsChecks/<>c__DisplayClass2_0&) (at Assets/Editor/TrialSettingsChecks.cs:25)
+AFKTrial.Editor.TrialSettingsChecks:Check (AFKTrial.TrialData) (at Assets/Editor/TrialSettingsChecks.cs:104)
+AFKTrial.Editor.TrialChecks:Run () (at Assets/Editor/TrialChecks.cs:35)
+
+(Filename: Assets/Trial/TrialRunner.IdleRewards.cs Line: 156)
+
+진행을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요. Sharing violation on path C:\Users\Lazi_Boi\AppData\Local\Temp\DefaultCompany\GuideValidation~\summon-a13e058c-fb0d-499d-9b3a-3fbabc7ce435\progress.json.tmp
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+AFKTrial.TrialRunner:TrySaveProgress (AFKTrial.TrialBattle/Progress,long,bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:156)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+AFKTrial.Editor.TrialSummonChecks/<>c__DisplayClass1_0:<Check>g__Call|1 (string,object[]) (at Assets/Editor/TrialSummonChecks.cs:16)
+AFKTrial.Editor.TrialSummonChecks/<>c__DisplayClass1_0:<Check>g__Save|3 (AFKTrial.TrialBattle/Progress) (at Assets/Editor/TrialSummonChecks.cs:24)
+AFKTrial.TrialBattle:Summon (int,System.Func`2<AFKTrial.TrialBattle/Progress, bool>) (at Assets/Trial/TrialBattle.cs:371)
+AFKTrial.Editor.TrialSummonChecks:Check (AFKTrial.TrialData) (at Assets/Editor/TrialSummonChecks.cs:27)
+AFKTrial.Editor.TrialChecks:Run () (at Assets/Editor/TrialChecks.cs:37)
+
+(Filename: Assets/Trial/TrialRunner.IdleRewards.cs Line: 156)
+
+진행을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요. Sharing violation on path C:\Users\Lazi_Boi\AppData\Local\Temp\DefaultCompany\GuideValidation~\summon-a13e058c-fb0d-499d-9b3a-3fbabc7ce435\progress.json.tmp
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+AFKTrial.TrialRunner:TrySaveProgress (AFKTrial.TrialBattle/Progress,long,bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:156)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+AFKTrial.Editor.TrialSummonChecks/<>c__DisplayClass1_0:<Check>g__Call|1 (string,object[]) (at Assets/Editor/TrialSummonChecks.cs:16)
+AFKTrial.Editor.TrialSummonChecks/<>c__DisplayClass1_0:<Check>g__Save|3 (AFKTrial.TrialBattle/Progress) (at Assets/Editor/TrialSummonChecks.cs:24)
+AFKTrial.TrialBattle:ConfirmSummons (System.Func`2<AFKTrial.TrialBattle/Progress, bool>) (at Assets/Trial/TrialBattle.SummonResults.cs:41)
+AFKTrial.Editor.TrialSummonChecks:Check (AFKTrial.TrialData) (at Assets/Editor/TrialSummonChecks.cs:35)
+AFKTrial.Editor.TrialChecks:Run () (at Assets/Editor/TrialChecks.cs:37)
+
+(Filename: Assets/Trial/TrialRunner.IdleRewards.cs Line: 156)
+
+진행을 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요. Sharing violation on path C:\Users\Lazi_Boi\AppData\Local\Temp\DefaultCompany\GuideValidation~\guides-2663bc09-cb54-4196-ba5c-c607f3d363fd\progress.json.tmp
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+AFKTrial.TrialRunner:TrySaveProgress (AFKTrial.TrialBattle/Progress,long,bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:156)
+AFKTrial.TrialRunner:CheckpointProgress (bool) (at Assets/Trial/TrialRunner.IdleRewards.cs:165)
+AFKTrial.TrialRunner:DismissGuide (bool) (at Assets/Trial/TrialRunner.Guides.cs:50)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+AFKTrial.Editor.TrialGuideChecks:<Check>g__Call|2_3 (string,object[],AFKTrial.Editor.TrialGuideChecks/<>c__DisplayClass2_0&) (at Assets/Editor/TrialGuideChecks.cs:55)
+AFKTrial.Editor.TrialGuideChecks:Check (AFKTrial.TrialData) (at Assets/Editor/TrialGuideChecks.cs:90)
+AFKTrial.Editor.TrialChecks:Run () (at Assets/Editor/TrialChecks.cs:38)
+
+(Filename: Assets/Trial/TrialRunner.IdleRewards.cs Line: 156)
+
+[AFK Trial] PASS: battle, hero growth, formation and dungeon checks. See Logs/TrialChecks.txt
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+AFKTrial.Editor.TrialChecks:Run () (at Assets/Editor/TrialChecks.cs:121)
+
+(Filename: Assets/Editor/TrialChecks.cs Line: 121)
+
+Batchmode quit successfully invoked - shutting down!
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-Lazi_Boi-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-Lazi_Boi channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0

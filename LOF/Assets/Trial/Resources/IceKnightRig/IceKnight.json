@@ -1,0 +1,657 @@
+{
+  "skeleton": {
+    "spine": "3.8.99",
+    "images": "./",
+    "x": -151,
+    "y": -9,
+    "width": 302,
+    "height": 320
+  },
+  "bones": [
+    {
+      "name": "root"
+    },
+    {
+      "name": "pelvis",
+      "parent": "root",
+      "x": -36,
+      "y": 134
+    },
+    {
+      "name": "body",
+      "parent": "pelvis",
+      "x": 1,
+      "y": 49
+    },
+    {
+      "name": "backBoot",
+      "parent": "pelvis",
+      "x": -35,
+      "y": -73
+    },
+    {
+      "name": "frontBoot",
+      "parent": "pelvis",
+      "x": 29,
+      "y": -45
+    },
+    {
+      "name": "gauntlet",
+      "parent": "body",
+      "x": 42,
+      "y": -2
+    },
+    {
+      "name": "blade",
+      "parent": "gauntlet",
+      "x": 19,
+      "y": -24
+    }
+  ],
+  "slots": [
+    {
+      "name": "backBoot",
+      "bone": "backBoot"
+    },
+    {
+      "name": "frontBoot",
+      "bone": "frontBoot"
+    },
+    {
+      "name": "gauntlet",
+      "bone": "gauntlet"
+    },
+    {
+      "name": "body",
+      "bone": "body"
+    },
+    {
+      "name": "blade",
+      "bone": "blade"
+    },
+    {
+      "name": "pose",
+      "bone": "root",
+      "attachment": "idle01"
+    },
+    {
+      "name": "attackTrail",
+      "bone": "root"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "backBoot": {
+          "backBoot": {
+            "x": -4.4381,
+            "y": -26.9612,
+            "width": 27.2518,
+            "height": 71.6899
+          }
+        },
+        "frontBoot": {
+          "frontBoot": {
+            "x": 14.4323,
+            "y": -38.8372,
+            "width": 46.8236,
+            "height": 95.5039
+          }
+        },
+        "gauntlet": {
+          "gauntlet": {
+            "x": 8.9795,
+            "y": -11.0233,
+            "width": 27.7473,
+            "height": 37.9535
+          }
+        },
+        "body": {
+          "body": {
+            "x": 31.7793,
+            "y": -33.4884,
+            "width": 295.5587,
+            "height": 317.0233
+          }
+        },
+        "blade": {
+          "blade": {
+            "x": 54.2691,
+            "y": -50.031,
+            "width": 133.534,
+            "height": 119.814
+          }
+        },
+        "pose": {
+          "walk1": {
+            "x": -7.7,
+            "y": 139.2,
+            "width": 278.6,
+            "height": 283
+          },
+          "walk2": {
+            "x": -4.7231,
+            "y": 138.2,
+            "width": 283.0769,
+            "height": 281
+          },
+          "walk3": {
+            "x": -14.3608,
+            "y": 140.2,
+            "width": 270.8784,
+            "height": 285
+          },
+          "walk4": {
+            "x": -8.5896,
+            "y": 138.2,
+            "width": 278.3958,
+            "height": 281
+          },
+          "walk5": {
+            "x": -13.1939,
+            "y": 138.2,
+            "width": 264.1051,
+            "height": 281
+          },
+          "walk6": {
+            "x": -4.4121,
+            "y": 138.2,
+            "width": 260.8525,
+            "height": 281
+          },
+          "walk7": {
+            "x": -10.0454,
+            "y": 139.2,
+            "width": 262.2474,
+            "height": 283
+          },
+          "walk8": {
+            "x": -1.9429,
+            "y": 138.7,
+            "width": 257.6,
+            "height": 282
+          },
+          "attack1": {
+            "x": -1.1073,
+            "y": 145.925,
+            "width": 257.1498,
+            "height": 296.45
+          },
+          "attack2": {
+            "x": 21.06,
+            "y": 128.74,
+            "width": 296.92,
+            "height": 262.08
+          },
+          "attack3": {
+            "x": 17.5,
+            "y": 114.1025,
+            "width": 306.03,
+            "height": 232.805
+          },
+          "attack4": {
+            "x": 29.5,
+            "y": 114.1025,
+            "width": 306.03,
+            "height": 232.805
+          },
+          "attack5": {
+            "x": 61.297,
+            "y": 103.816,
+            "width": 374.274,
+            "height": 212.232
+          },
+          "attack6": {
+            "x": 56.297,
+            "y": 103.816,
+            "width": 374.274,
+            "height": 212.232
+          },
+          "attack7": {
+            "x": 30.085,
+            "y": 119.91,
+            "width": 293.91,
+            "height": 244.42
+          },
+          "attack8": {
+            "x": -1.1073,
+            "y": 145.925,
+            "width": 257.1498,
+            "height": 296.45
+          },
+          "idle01": {
+            "x": -1.1073,
+            "y": 145.925,
+            "width": 257.1498,
+            "height": 296.45
+          },
+          "idle02": {
+            "x": -1.1043,
+            "y": 145.9669,
+            "width": 257.1791,
+            "height": 296.5337
+          },
+          "idle03": {
+            "x": -1.096,
+            "y": 146.0861,
+            "width": 257.2627,
+            "height": 296.7722
+          },
+          "idle04": {
+            "x": -1.0835,
+            "y": 146.2645,
+            "width": 257.3879,
+            "height": 297.129
+          },
+          "idle05": {
+            "x": -1.0687,
+            "y": 146.475,
+            "width": 257.5355,
+            "height": 297.55
+          },
+          "idle06": {
+            "x": -1.0539,
+            "y": 146.6855,
+            "width": 257.6831,
+            "height": 297.971
+          },
+          "idle07": {
+            "x": -1.0414,
+            "y": 146.8639,
+            "width": 257.8082,
+            "height": 298.3278
+          },
+          "idle08": {
+            "x": -1.0331,
+            "y": 146.9831,
+            "width": 257.8918,
+            "height": 298.5663
+          },
+          "idle09": {
+            "x": -1.0301,
+            "y": 147.025,
+            "width": 257.9212,
+            "height": 298.65
+          },
+          "idle10": {
+            "x": -1.0331,
+            "y": 146.9831,
+            "width": 257.8918,
+            "height": 298.5663
+          },
+          "idle11": {
+            "x": -1.0414,
+            "y": 146.8639,
+            "width": 257.8082,
+            "height": 298.3278
+          },
+          "idle12": {
+            "x": -1.0539,
+            "y": 146.6855,
+            "width": 257.6831,
+            "height": 297.971
+          },
+          "idle13": {
+            "x": -1.0687,
+            "y": 146.475,
+            "width": 257.5355,
+            "height": 297.55
+          },
+          "idle14": {
+            "x": -1.0835,
+            "y": 146.2645,
+            "width": 257.3879,
+            "height": 297.129
+          },
+          "idle15": {
+            "x": -1.096,
+            "y": 146.0861,
+            "width": 257.2627,
+            "height": 296.7722
+          },
+          "idle16": {
+            "x": -1.1043,
+            "y": 145.9669,
+            "width": 257.1791,
+            "height": 296.5337
+          }
+        },
+        "attackTrail": {
+          "trail1": {
+            "x": 158.0,
+            "y": 147.68,
+            "width": 58,
+            "height": 23
+          },
+          "trail2": {
+            "x": 195.0,
+            "y": 150.88,
+            "width": 114,
+            "height": 38
+          },
+          "trail3": {
+            "x": 220.5,
+            "y": 146.88,
+            "width": 55,
+            "height": 24
+          }
+        }
+      }
+    }
+  ],
+  "events": {
+    "impact": {}
+  },
+  "animations": {
+    "walk": {
+      "slots": {
+        "backBoot": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "frontBoot": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "gauntlet": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "body": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "blade": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "walk1"
+            },
+            {
+              "time": 0.1,
+              "name": "walk2"
+            },
+            {
+              "time": 0.15,
+              "name": "walk3"
+            },
+            {
+              "time": 0.2,
+              "name": "walk4"
+            },
+            {
+              "time": 0.3,
+              "name": "walk5"
+            },
+            {
+              "time": 0.4,
+              "name": "walk6"
+            },
+            {
+              "time": 0.45,
+              "name": "walk7"
+            },
+            {
+              "time": 0.5,
+              "name": "walk8"
+            },
+            {
+              "time": 0.6,
+              "name": "walk1"
+            }
+          ]
+        }
+      }
+    },
+    "attack": {
+      "slots": {
+        "backBoot": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "frontBoot": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "gauntlet": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "body": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "blade": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "attack1"
+            },
+            {
+              "time": 0.05,
+              "name": "attack2"
+            },
+            {
+              "time": 0.15,
+              "name": "attack3"
+            },
+            {
+              "time": 0.25,
+              "name": "attack4"
+            },
+            {
+              "time": 0.3,
+              "name": "attack5"
+            },
+            {
+              "time": 0.35,
+              "name": "attack6"
+            },
+            {
+              "time": 0.5,
+              "name": "attack7"
+            },
+            {
+              "time": 0.65,
+              "name": "attack8"
+            },
+            {
+              "time": 0.75,
+              "name": "attack8"
+            }
+          ]
+        },
+        "attackTrail": {
+          "attachment": [
+            {
+              "time": 0.275,
+              "name": "trail1"
+            },
+            {
+              "time": 0.3,
+              "name": "trail2"
+            },
+            {
+              "time": 0.35,
+              "name": "trail3"
+            },
+            {
+              "time": 0.425
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.3,
+          "name": "impact"
+        }
+      ]
+    },
+    "idle": {
+      "slots": {
+        "backBoot": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "frontBoot": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "gauntlet": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "body": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "blade": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            }
+          ]
+        },
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "idle01"
+            },
+            {
+              "time": 0.15,
+              "name": "idle02"
+            },
+            {
+              "time": 0.3,
+              "name": "idle03"
+            },
+            {
+              "time": 0.45,
+              "name": "idle04"
+            },
+            {
+              "time": 0.6,
+              "name": "idle05"
+            },
+            {
+              "time": 0.75,
+              "name": "idle06"
+            },
+            {
+              "time": 0.9,
+              "name": "idle07"
+            },
+            {
+              "time": 1.05,
+              "name": "idle08"
+            },
+            {
+              "time": 1.2,
+              "name": "idle09"
+            },
+            {
+              "time": 1.35,
+              "name": "idle10"
+            },
+            {
+              "time": 1.5,
+              "name": "idle11"
+            },
+            {
+              "time": 1.65,
+              "name": "idle12"
+            },
+            {
+              "time": 1.8,
+              "name": "idle13"
+            },
+            {
+              "time": 1.95,
+              "name": "idle14"
+            },
+            {
+              "time": 2.1,
+              "name": "idle15"
+            },
+            {
+              "time": 2.25,
+              "name": "idle16"
+            },
+            {
+              "time": 2.4,
+              "name": "idle01"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

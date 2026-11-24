@@ -1,0 +1,26 @@
+Approved audio, 2026-11-24
+
+Hope (Orchestral battle music) — MintoDog
+https://opengameart.org/content/hopeorchestral-battle-music
+License: CC0 https://creativecommons.org/publicdomain/zero/1.0/
+Background.ogg is the author's loopable OGG, unchanged.
+
+Medieval sound effects - Weapon impacts — Ben Jaszczak & Brian Nelson (Still North Media)
+https://opengameart.org/node/146863
+License: CC0 https://creativecommons.org/publicdomain/zero/1.0/
+Weapon clips are excerpts from the first weapon-on-weapon archive, converted to mono PCM16,
+onset-trimmed, peak-normalized to 0.8, with a 25 ms end fade.
+Sword: Norse Sword Katana Blade on Blade.wav
+Katana: Sabre Katana Blade on Blade.wav
+Spear: Axe Spear Blade on Blade.wav
+Mace: Mace Norse Sword Blade.wav
+Hammer: Mace Axe Blade and Haft.wav
+Shield: Axe Sabre Haft on Hilt.wav (a blunt weapon contact used for shield bash)
+Dagger: Dagger Katana Blade on Blade.wav
+Axe: Axe Norse Sword Blade on Blade.wav
+
+Swishes Sound Pack — artisticdude
+https://opengameart.org/content/swishes-sound-pack
+License: CC0 https://creativecommons.org/publicdomain/zero/1.0/
+SwingLight: swish-2.wav; SwingHeavy: swish-9.wav
+Excerpts converted to mono PCM16, onset-trimmed, peak-normalized to 0.8 with end fades.

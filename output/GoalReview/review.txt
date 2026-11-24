@@ -1,0 +1,6 @@
+Goal checks: PASS; report checks.txt.
+Windows development build: succeeded; build-final.log.
+Visual review: 960x540 and 540x960, battle/hall/list/all-complete captured and inspected. Fixed clipped two-line guidance.
+User save profile: not opened by screenshot probe.
+Remaining issue: screenshot player exit code -1073741819 (0xC0000005), reproduced using both default D3D12 and forced D3D11 after all captures. Logs end in PlayerConnection::Cleanup. Cause unconfirmed; normal user quit needs verification before release.
+Temporary preview scripts removed from Assets; retained here for reproduction.

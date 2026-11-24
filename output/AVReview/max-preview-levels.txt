@@ -1,0 +1,12 @@
+menu=Audio
+elapsed=0
+warning=
+music=0.3
+effects=0
+draftMusic=1
+draftEffects=1
+backgroundGain=0.4
+backgroundTime=77.952
+peak=0.2136396
+rms=0.0142058737833528
+samples=7485440

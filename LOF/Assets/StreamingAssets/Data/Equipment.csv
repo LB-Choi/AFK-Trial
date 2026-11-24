@@ -1,0 +1,7 @@
+name,slot,bonus,sellGold,bonusPerEnhancement,rarity
+Iron Sword,Weapon,3,12,1,Common
+Knight Blade,Weapon,6,25,1,Uncommon
+Leather Armor,Armor,8,12,2,Common
+Steel Armor,Armor,18,25,2,Uncommon
+Amber Necklace,Necklace,20,12,5,Common
+Jade Necklace,Necklace,40,25,5,Rare

@@ -1,0 +1,11 @@
+utc=1795343957
+suspended=False
+elapsed=0.15
+hp=100
+gold=1000
+pendingSeconds=0
+lastSeenUtc=1795343946
+restart=False
+systemMenu=Settings
+guide=-1
+error=

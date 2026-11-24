@@ -1,0 +1,436 @@
+{
+  "skeleton": {
+    "spine": "3.8.99",
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "root"
+    }
+  ],
+  "slots": [
+    {
+      "name": "pose",
+      "bone": "root"
+    },
+    {
+      "name": "attackTrail",
+      "bone": "root"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "pose": {
+          "walk1": {
+            "y": 155.6101,
+            "x": -2.2177,
+            "width": 192.2025,
+            "height": 308.2633
+          },
+          "walk2": {
+            "y": 154.8709,
+            "x": -2.2177,
+            "width": 201.0734,
+            "height": 306.7848
+          },
+          "walk3": {
+            "y": 155.6101,
+            "x": 1.4785,
+            "width": 168.5468,
+            "height": 311.2203
+          },
+          "walk4": {
+            "y": 154.5013,
+            "x": 4.0658,
+            "width": 167.8076,
+            "height": 309.0025
+          },
+          "walk5": {
+            "y": 153.3924,
+            "x": -8.1316,
+            "width": 180.3747,
+            "height": 306.7848
+          },
+          "walk6": {
+            "y": 152.2835,
+            "x": -8.8709,
+            "width": 186.2886,
+            "height": 304.5671
+          },
+          "walk7": {
+            "y": 155.6101,
+            "x": 4.0658,
+            "width": 145.6304,
+            "height": 311.2203
+          },
+          "walk8": {
+            "y": 154.5013,
+            "x": 6.6531,
+            "width": 144.8911,
+            "height": 309.0025
+          },
+          "attack1": {
+            "y": 146.3696,
+            "x": 6.2835,
+            "width": 210.6835,
+            "height": 292.7392
+          },
+          "attack2": {
+            "y": 142.3038,
+            "x": -0.4127,
+            "width": 203.2911,
+            "height": 284.6076
+          },
+          "attack3": {
+            "y": 154.1316,
+            "x": -0.9342,
+            "width": 222.5114,
+            "height": 308.2633
+          },
+          "attack4": {
+            "y": 155.2405,
+            "x": 4.0658,
+            "width": 222.5114,
+            "height": 310.481
+          },
+          "attack5": {
+            "y": 139.3468,
+            "x": 82.5494,
+            "width": 371.0987,
+            "height": 278.6937
+          },
+          "attack6": {
+            "y": 138.9772,
+            "x": 87.2886,
+            "width": 372.5772,
+            "height": 277.9544
+          },
+          "attack7": {
+            "y": 147.4785,
+            "x": 11.957,
+            "width": 204.0304,
+            "height": 294.957
+          },
+          "attack8": {
+            "y": 146.3696,
+            "x": 6.2835,
+            "width": 210.6835,
+            "height": 292.7392
+          },
+          "idle01": {
+            "x": 6.2835,
+            "y": 146.3696,
+            "width": 210.6835,
+            "height": 292.7392
+          },
+          "idle02": {
+            "x": 5.9139,
+            "y": 146.3696,
+            "width": 209.9443,
+            "height": 292.7392
+          },
+          "idle03": {
+            "x": 5.9139,
+            "y": 146,
+            "width": 209.9443,
+            "height": 292
+          },
+          "idle04": {
+            "x": 5.9139,
+            "y": 146,
+            "width": 209.9443,
+            "height": 292
+          },
+          "idle05": {
+            "x": 6.6532,
+            "y": 145.6304,
+            "width": 211.4228,
+            "height": 291.2608
+          },
+          "idle06": {
+            "x": 5.9139,
+            "y": 145.6304,
+            "width": 209.9443,
+            "height": 291.2608
+          },
+          "idle07": {
+            "x": 5.9139,
+            "y": 145.2608,
+            "width": 209.9443,
+            "height": 290.5215
+          },
+          "idle08": {
+            "x": 5.9139,
+            "y": 145.2608,
+            "width": 209.9443,
+            "height": 290.5215
+          },
+          "idle09": {
+            "x": 6.2835,
+            "y": 144.8911,
+            "width": 210.6835,
+            "height": 289.7823
+          },
+          "idle10": {
+            "x": 5.5443,
+            "y": 145.2608,
+            "width": 209.2051,
+            "height": 290.5215
+          },
+          "idle11": {
+            "x": 5.5443,
+            "y": 145.2608,
+            "width": 209.2051,
+            "height": 290.5215
+          },
+          "idle12": {
+            "x": 5.5443,
+            "y": 145.6304,
+            "width": 209.2051,
+            "height": 291.2608
+          },
+          "idle13": {
+            "x": 5.9139,
+            "y": 145.6304,
+            "width": 209.9443,
+            "height": 291.2608
+          },
+          "idle14": {
+            "x": 5.5443,
+            "y": 146,
+            "width": 209.2051,
+            "height": 292
+          },
+          "idle15": {
+            "x": 5.5443,
+            "y": 146,
+            "width": 209.2051,
+            "height": 292
+          },
+          "idle16": {
+            "x": 5.5443,
+            "y": 146.3696,
+            "width": 209.2051,
+            "height": 292.7392
+          }
+        },
+        "attackTrail": {
+          "trail1": {
+            "x": 58.7924,
+            "y": 287.5,
+            "width": 54,
+            "height": 57
+          },
+          "trail2": {
+            "x": 168.8281,
+            "y": 195.7505,
+            "width": 214.3808,
+            "height": 265.9379
+          },
+          "trail3": {
+            "x": 246.443,
+            "y": 147.9395,
+            "width": 94,
+            "height": 148.96
+          }
+        }
+      }
+    }
+  ],
+  "events": {
+    "impact": {}
+  },
+  "animations": {
+    "walk": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "walk1"
+            },
+            {
+              "time": 0.1,
+              "name": "walk2"
+            },
+            {
+              "time": 0.15,
+              "name": "walk3"
+            },
+            {
+              "time": 0.25,
+              "name": "walk4"
+            },
+            {
+              "time": 0.35,
+              "name": "walk5"
+            },
+            {
+              "time": 0.45,
+              "name": "walk6"
+            },
+            {
+              "time": 0.55,
+              "name": "walk7"
+            },
+            {
+              "time": 0.6,
+              "name": "walk8"
+            },
+            {
+              "time": 0.7,
+              "name": "walk1"
+            }
+          ]
+        }
+      }
+    },
+    "attack": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "attack1"
+            },
+            {
+              "time": 0.1,
+              "name": "attack2"
+            },
+            {
+              "time": 0.2,
+              "name": "attack3"
+            },
+            {
+              "time": 0.35,
+              "name": "attack4"
+            },
+            {
+              "time": 0.45,
+              "name": "attack5"
+            },
+            {
+              "time": 0.55,
+              "name": "attack6"
+            },
+            {
+              "time": 0.7,
+              "name": "attack7"
+            },
+            {
+              "time": 0.85,
+              "name": "attack8"
+            },
+            {
+              "time": 0.95,
+              "name": "attack8"
+            }
+          ]
+        },
+        "attackTrail": {
+          "attachment": [
+            {
+              "time": 0.4,
+              "name": "trail1"
+            },
+            {
+              "time": 0.45,
+              "name": "trail2"
+            },
+            {
+              "time": 0.55,
+              "name": "trail3"
+            },
+            {
+              "time": 0.625
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.45,
+          "name": "impact"
+        }
+      ]
+    },
+    "idle": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "idle01"
+            },
+            {
+              "time": 0.14,
+              "name": "idle02"
+            },
+            {
+              "time": 0.28,
+              "name": "idle03"
+            },
+            {
+              "time": 0.42,
+              "name": "idle04"
+            },
+            {
+              "time": 0.56,
+              "name": "idle05"
+            },
+            {
+              "time": 0.7,
+              "name": "idle06"
+            },
+            {
+              "time": 0.84,
+              "name": "idle07"
+            },
+            {
+              "time": 0.98,
+              "name": "idle08"
+            },
+            {
+              "time": 1.12,
+              "name": "idle09"
+            },
+            {
+              "time": 1.26,
+              "name": "idle10"
+            },
+            {
+              "time": 1.4,
+              "name": "idle11"
+            },
+            {
+              "time": 1.54,
+              "name": "idle12"
+            },
+            {
+              "time": 1.68,
+              "name": "idle13"
+            },
+            {
+              "time": 1.82,
+              "name": "idle14"
+            },
+            {
+              "time": 1.96,
+              "name": "idle15"
+            },
+            {
+              "time": 2.1,
+              "name": "idle16"
+            },
+            {
+              "time": 2.24,
+              "name": "idle01"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

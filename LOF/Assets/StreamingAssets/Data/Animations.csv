@@ -1,0 +1,14 @@
+id,rigResource,impactSeconds
+ice_knight,IceKnightRig/IceKnight,0.30
+scythe_knight,ScytheKnightRig/ScytheKnight,0.45
+banner_paladin,BannerPaladinRig/BannerPaladin,0.45
+lion_guardian,LionGuardianRig/LionGuardian,0.45
+hammer_maid,HammerMaidRig/HammerMaid,0.45
+katana_knight,KatanaKnightRig/KatanaKnight,0.45
+royal_knight,RoyalKnightRig/RoyalKnight,0.45
+sun_paladin,SunPaladinRig/SunPaladin,0.45
+tower_knight,TowerKnightRig/TowerKnight,0.45
+axe_warrior,AxeWarriorRig/AxeWarrior,0.45
+bandit,BanditRig/Bandit,0.35
+bandit_captain,BanditCaptainRig/BanditCaptain,0.50
+bandit_chief,BanditChiefRig/BanditChief,0.52

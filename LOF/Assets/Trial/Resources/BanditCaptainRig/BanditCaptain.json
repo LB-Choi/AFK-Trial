@@ -1,0 +1,306 @@
+{
+  "skeleton": {
+    "spine": "3.8.99",
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "root"
+    }
+  ],
+  "slots": [
+    {
+      "name": "attackTrail",
+      "bone": "root"
+    },
+    {
+      "name": "pose",
+      "bone": "root",
+      "attachment": "idle1"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "pose": {
+          "idle1": {
+            "x": -20.73,
+            "y": 165.0,
+            "width": 253.8,
+            "height": 332.24
+          },
+          "idle2": {
+            "x": -21.85,
+            "y": 165.28,
+            "width": 253.8,
+            "height": 332.8
+          },
+          "idle3": {
+            "x": -22.97,
+            "y": 165.28,
+            "width": 264.45,
+            "height": 332.8
+          },
+          "idle4": {
+            "x": -21.57,
+            "y": 164.72,
+            "width": 256.04,
+            "height": 331.68
+          },
+          "walk1": {
+            "x": -14.84,
+            "y": 162.5,
+            "width": 271.3,
+            "height": 327.83
+          },
+          "walk2": {
+            "x": -7.69,
+            "y": 160.5,
+            "width": 254.56,
+            "height": 323.8
+          },
+          "walk3": {
+            "x": -8.42,
+            "y": 163.5,
+            "width": 216.13,
+            "height": 329.81
+          },
+          "walk4": {
+            "x": -21.12,
+            "y": 162.5,
+            "width": 297.61,
+            "height": 326.86
+          },
+          "walk5": {
+            "x": -36.93,
+            "y": 160.5,
+            "width": 262.64,
+            "height": 322.82
+          },
+          "walk6": {
+            "x": -38.46,
+            "y": 163.5,
+            "width": 264.82,
+            "height": 328.84
+          },
+          "attack1": {
+            "x": -22.4,
+            "y": 165.82,
+            "width": 267.85,
+            "height": 331.65
+          },
+          "attack2": {
+            "x": -25.57,
+            "y": 165.82,
+            "width": 287.82,
+            "height": 331.65
+          },
+          "attack3": {
+            "x": 11.44,
+            "y": 178.49,
+            "width": 241.06,
+            "height": 356.97
+          },
+          "attack4": {
+            "x": -46.09,
+            "y": 149.16,
+            "width": 443.35,
+            "height": 298.33
+          },
+          "attack5": {
+            "x": -25.09,
+            "y": 150.06,
+            "width": 294.22,
+            "height": 300.12
+          },
+          "attack6": {
+            "x": -28.78,
+            "y": 163.1,
+            "width": 280.93,
+            "height": 326.2
+          },
+          "attackArc": {
+            "x": -3.27,
+            "y": 176.76,
+            "width": 338.81,
+            "height": 353.52
+          }
+        },
+        "attackTrail": {
+          "trail1": {
+            "x": -21.5,
+            "y": 366.0,
+            "width": 265,
+            "height": 84
+          },
+          "trail2": {
+            "x": -181.0,
+            "y": 246.5,
+            "width": 162,
+            "height": 263
+          },
+          "trail3": {
+            "x": -231.0,
+            "y": 203.5,
+            "width": 64,
+            "height": 177
+          },
+          "trail4": {
+            "x": -196.5,
+            "y": 71.0,
+            "width": 109,
+            "height": 106
+          }
+        }
+      }
+    }
+  ],
+  "animations": {
+    "idle": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "idle1"
+            },
+            {
+              "time": 0.26,
+              "name": "idle2"
+            },
+            {
+              "time": 0.57,
+              "name": "idle3"
+            },
+            {
+              "time": 0.84,
+              "name": "idle2"
+            },
+            {
+              "time": 1.08,
+              "name": "idle4"
+            },
+            {
+              "time": 1.36,
+              "name": "idle1"
+            }
+          ]
+        }
+      }
+    },
+    "walk": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "walk1"
+            },
+            {
+              "time": 0.14,
+              "name": "walk2"
+            },
+            {
+              "time": 0.28,
+              "name": "walk3"
+            },
+            {
+              "time": 0.42,
+              "name": "walk4"
+            },
+            {
+              "time": 0.56,
+              "name": "walk5"
+            },
+            {
+              "time": 0.7,
+              "name": "walk6"
+            },
+            {
+              "time": 0.84,
+              "name": "walk1"
+            }
+          ]
+        }
+      }
+    },
+    "attack": {
+      "slots": {
+        "pose": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": "idle1"
+            },
+            {
+              "time": 0.055,
+              "name": "attack1"
+            },
+            {
+              "time": 0.18,
+              "name": "attack2"
+            },
+            {
+              "time": 0.36,
+              "name": "attack3"
+            },
+            {
+              "time": 0.435,
+              "name": "attackArc"
+            },
+            {
+              "time": 0.5,
+              "name": "attack4"
+            },
+            {
+              "time": 0.61,
+              "name": "attack5"
+            },
+            {
+              "time": 0.75,
+              "name": "attack6"
+            },
+            {
+              "time": 0.89,
+              "name": "idle1"
+            },
+            {
+              "time": 0.96,
+              "name": "idle1"
+            }
+          ]
+        },
+        "attackTrail": {
+          "attachment": [
+            {
+              "time": 0.435,
+              "name": "trail1"
+            },
+            {
+              "time": 0.5,
+              "name": "trail2"
+            },
+            {
+              "time": 0.555,
+              "name": "trail3"
+            },
+            {
+              "time": 0.61,
+              "name": "trail4"
+            },
+            {
+              "time": 0.7
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.5,
+          "name": "impact"
+        }
+      ]
+    }
+  }
+}
