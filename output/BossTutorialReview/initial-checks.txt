@@ -1,4 +1,0 @@
-FAIL: System.InvalidOperationException: Guides: second boss has independent entry guide
-  at AFKTrial.Editor.TrialGuideChecks.Require (System.Boolean ok, System.String message) [0x00014] in C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\BossTutorialReview\Project\Assets\Editor\TrialGuideChecks.cs:11 
-  at AFKTrial.Editor.TrialGuideChecks.Check (AFKTrial.TrialData data) [0x00d29] in C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\BossTutorialReview\Project\Assets\Editor\TrialGuideChecks.cs:147 
-  at AFKTrial.Editor.TrialChecks.Run () [0x000a9] in C:\Users\Lazi_Boi\Documents\github\AFK-Trial\output\BossTutorialReview\Project\Assets\Editor\TrialChecks.cs:38 

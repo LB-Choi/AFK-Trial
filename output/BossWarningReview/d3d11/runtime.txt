@@ -1,1 +1,0 @@
-PASS: both boss warnings rendered; information menu pauses pending warning and cooldown.

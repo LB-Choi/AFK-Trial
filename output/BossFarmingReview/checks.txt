@@ -1,4 +1,0 @@
-PASS: battle, hero growth, formation and dungeon checks
-Unity 6000.5.0f1
-2026-11-23T09:51:55.9060589Z
-Not a Windows build or full game QA result.
