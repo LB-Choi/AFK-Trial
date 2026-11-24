@@ -1,1 +1,0 @@
-PASS: four cues play on intended AudioSources, volumes applied, mute persisted; streamed looping background plays, pauses/resumes and restores mute. This is not a listening-quality test.
