@@ -185,7 +185,7 @@ namespace AFKTrial
             if (courtHeading == null)
                 courtHeading = new GUIStyle(title) { padding = new RectOffset(), clipping = TextClipping.Clip, wordWrap = false };
             courtHeading.fontSize = size;
-            courtHeading.font = value == "AFK Trial" && courtFont != null ? courtFont : koreanFont;
+            courtHeading.font = value == Application.productName && courtFont != null ? courtFont : koreanFont;
             courtHeading.alignment = alignment;
             GUI.Label(area, value, courtHeading);
         }

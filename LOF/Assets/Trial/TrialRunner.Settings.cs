@@ -27,7 +27,7 @@ namespace AFKTrial
         private void LoadDisplaySettings()
         {
             if (string.IsNullOrEmpty(settingsPath))
-                settingsPath = Path.Combine(Application.persistentDataPath, "AFKTrial", "settings.json");
+                settingsPath = Path.Combine(ProfileFolder, "settings.json");
             showDamageNumbers = true;
             musicVolume = .3f; effectsVolume = .65f;
             settingsError = null;
@@ -170,7 +170,7 @@ namespace AFKTrial
             string heading = systemMenu == SystemMenu.Settings ? "설정" : systemMenu == SystemMenu.Information ? "게임 정보" : systemMenu == SystemMenu.Guides ? "상황별 안내 다시 보기" :
                 systemMenu == SystemMenu.Reset ? "진행을 초기화할까요?" : "게임을 종료할까요?";
             CourtHeading(new Rect(24, 14, 360, 42), heading, 29, TextAnchor.MiddleLeft);
-            ArcadeText(new Rect(25, 58, 410, 23), atTitle ? "AFK Trial" : "전투 일시정지", 13, HallAmber, TextAnchor.MiddleLeft);
+            ArcadeText(new Rect(25, 58, 410, 23), atTitle ? Application.productName : "전투 일시정지", 13, HallAmber, TextAnchor.MiddleLeft);
             CourtRule(new Rect(24, 87, 416, 1), HallLine);
             if (systemMenu == SystemMenu.Settings)
             {
@@ -194,7 +194,7 @@ namespace AFKTrial
             else if (systemMenu == SystemMenu.Guides) DrawGuideList();
             else if (systemMenu == SystemMenu.Information)
             {
-                GUI.Label(new Rect(26, 109, 412, 275), "AFK Trial  /  " + Application.version +
+                GUI.Label(new Rect(26, 109, 412, 275), Application.productName + "  /  " + Application.version +
                     "\n\n로컬 싱글 플레이 자동 전투 게임입니다.\n기사 10종을 수집하고 1~3인 편성을 구성하여 메인 스테이지와 재화 던전을 공략하세요." +
                     "\n\n진행은 이 컴퓨터에 저장됩니다. 표시 설정은 별도로 저장되며 진행 초기화 후에도 유지됩니다." +
                     "\n\n유니티로 제작했습니다. 기획·아트·구현에 인공지능을 활용했습니다.", settingsBody);

@@ -51,9 +51,24 @@ namespace AFKTrial
             };
         }
 
+        private static string ProfileFolder
+        {
+            get
+            {
+                string root = Application.persistentDataPath;
+                var parent = Directory.GetParent(root);
+                if (parent != null && Path.GetFileName(root) == Application.productName)
+                {
+                    string legacy = Path.Combine(parent.FullName, "AFK Trial - Test", "AFKTrial");
+                    if (Directory.Exists(legacy)) return legacy;
+                }
+                return Path.Combine(root, "AFKTrial");
+            }
+        }
+
         private void OpenProgressSession()
         {
-            string folder = Path.Combine(Application.persistentDataPath, "AFKTrial");
+            string folder = ProfileFolder;
             OpenProgressSessionAt(folder);
         }
 
@@ -184,9 +199,7 @@ namespace AFKTrial
         {
             var pulls = battle.Summon(count, SaveMenuPurchase);
             if (pulls == null) return false;
-            PlayBattleSound(TrialBattle.SoundCue.Reward);
-
-            animationStart = Time.unscaledTime;
+            BeginSummonCeremony(pulls);
             return true;
         }
 

@@ -49,7 +49,7 @@ namespace AFKTrial.Editor
             }
 
             EditorSettings.serializationMode = SerializationMode.ForceText;
-            PlayerSettings.productName = "AFK Trial - Test";
+            PlayerSettings.productName = "Lords of Fame";
             PlayerSettings.defaultScreenWidth = 960;
             PlayerSettings.defaultScreenHeight = 540;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;

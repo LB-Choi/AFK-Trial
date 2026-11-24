@@ -39,6 +39,8 @@ namespace AFKTrial
             ResetGuideUI();
             resultDungeon = null;
             atTitle = true;
+            ceremony = CeremonyPhase.Closed;
+            ceremonyPulls = null;
             showRecruit = false;
             bossReview = bossPrevious = null;
             bossResultPending = false;
@@ -85,6 +87,12 @@ namespace AFKTrial
             if (!battle.Finished) finishedAnimationAge = 0;
             else if (!suspended) finishedAnimationAge = Mathf.Min(2f, finishedAnimationAge + Time.deltaTime);
             if (RefreshLifecycle() || suspended) return;
+            if (ceremony != CeremonyPhase.Closed)
+            {
+                UpdateSummonCeremony(Time.unscaledDeltaTime);
+                if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
+                return;
+            }
             UpdateGuides();
             if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
             if (GuideOpen) return;
@@ -154,6 +162,11 @@ namespace AFKTrial
             float scale = Mathf.Min((float)Screen.width / width, (float)Screen.height / height);
             GUI.matrix = Matrix4x4.TRS(new Vector3((Screen.width - width * scale) / 2,
                 (Screen.height - height * scale) / 2, 0), Quaternion.identity, Vector3.one * scale);
+            if (ceremony != CeremonyPhase.Closed)
+            {
+                DrawSummonCeremony(width, height);
+                return;
+            }
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
             {
                 if (GuideOpen) DismissGuide(true);
@@ -245,7 +258,7 @@ namespace AFKTrial
             DrawHallKnight(0, width * .72f, height * .96f, height * .78f, false);
             float left = width * .075f, top = height * .29f;
             Picture("KnightUI/OrderSeal", left, top - 52, 48, 48);
-            CourtHeading(new Rect(left, top, width * .48f, 90), "AFK Trial", 64, TextAnchor.MiddleLeft);
+            CourtHeading(new Rect(left, top, width * .83f, 90), Application.productName, sideBattle ? 60 : 48, TextAnchor.MiddleLeft);
             CourtRule(new Rect(left, top + 91, width * .30f, 1), HallAmber);
             if (ArcadeTab(new Rect(left, top + 123, 205, 51), "게임 시작", true)) BeginPlay();
             if (loadError != null) GUI.Label(new Rect(left, top + 182, width * .45f, 80), loadError, small);
