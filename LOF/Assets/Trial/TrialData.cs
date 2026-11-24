@@ -67,7 +67,7 @@ namespace AFKTrial
 
         public sealed class Fighter
         {
-            public string Id, Name, Portrait, Animation;
+            public string Id, Name, Animation;
             public Role Role;
             public int BaseArmor, ArmorPerLevel;
             public int SkillEvery;
@@ -131,7 +131,6 @@ namespace AFKTrial
                 if (!ids.Add(hero.Id)) throw row.Error("duplicate id " + hero.Id);
                 if (!Enum.TryParse(row.Optional("role", "None"), true, out hero.Role) || !Enum.IsDefined(typeof(Role), hero.Role))
                     throw row.Error("invalid hero role");
-                hero.Portrait = row.Text("portrait");
                 hero.HpPerLevel = row.Number("hpPerLevel");
                 hero.AttackPerLevel = row.Number("attackPerLevel");
                 hero.BaseArmor = row.Integer("baseArmor", fallback: 0);

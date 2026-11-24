@@ -136,7 +136,7 @@ Windows 실행 파일에서는 창이 실제로 최소화되었는지 확인한�
 | Equipment.csv | 새 게임에서 지급하는 장비 한 개당 한 행. 종류, 이름, 등급(Common, Uncommon, Rare), 기본 능력치, 판매 가격, 강화 단계당 증가량(bonusPerEnhancement) |
 | IdleRewards.csv | 방치 시간 상한(`capHours`), 온라인 기준 효율(`efficiencyPercent`), 일반 승리 한 번의 기준 시간(`referenceClearSeconds`) |
 | Dungeons.csv | 던전 종류(`kind`)와 난이도(`tier` 1~3)별 적 능력치 배율(`power`), 제한 시간(`seconds`), 승리 시 지급할 재화량(`reward`), 최초 클리어 소환권(`firstClearTickets`, 현재 각 1장) |
-| Heroes.csv | 역할(role: Attack, Defense, Support), 캐릭터별 이름, 초상화, 애니메이션, 기본 HP·공격력, 레벨당 증가량, 기본 방어력(baseArmor)과 레벨당 방어력(armorPerLevel), 이동 속도, 사거리, 공격 주기(초), 초기 편성 |
+| Heroes.csv | 역할(role: Attack, Defense, Support), 캐릭터별 이름, 애니메이션, 기본 HP·공격력, 레벨당 증가량, 기본 방어력(baseArmor)과 레벨당 방어력(armorPerLevel), 이동 속도, 사거리, 공격 주기(초), 초기 편성. 초상화는 해당 캐릭터의 기본 공격 첫 프레임을 사용한다. |
 | Enemies.csv | 일반 적과 보스의 이름, 기본 HP·공격력, 이동 속도, 사거리, 공격 주기(초) |
 | Progression.csv | 보스 등장 간격과 위치, 회차 길이, 제한 시간, 적 스탯 배율, 보상, 영웅 레벨당 골드·경험치 비용, 배치 간격, 전투 재시작 대기 시간 |
 | Animations.csv | 캐릭터 애니메이션 리소스와 기본 공격의 타격 시간(초). Heroes.csv의 animation 열에서 ID를 지정한다. |

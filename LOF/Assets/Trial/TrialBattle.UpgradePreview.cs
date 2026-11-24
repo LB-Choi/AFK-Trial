@@ -28,7 +28,7 @@ namespace AFKTrial
                 case SkillEffect.Sunder: case SkillEffect.Weaken: value.Duration = 3; break;
                 case SkillEffect.TeamArmor: value.Duration = 5; break;
                 case SkillEffect.Fortify: value.Duration = heroId == "tower_knight" ? 4 : 5; break;
-                case SkillEffect.Guard: case SkillEffect.DrainCurrentHp: value.Fraction = Mathf.Clamp01(value.Fraction); break;
+                case SkillEffect.Guard: case SkillEffect.ReduceCurrentAttack: value.Fraction = Mathf.Clamp01(value.Fraction); break;
                 case SkillEffect.Stun: value.Duration = .2f * rank; value.BossDuration = .1f * rank; break;
                 case SkillEffect.DoublePower: value.Fraction = 1; value.Duration = rank; break;
                 case SkillEffect.Blind: value.Duration = .1f * rank; break;
@@ -58,7 +58,7 @@ namespace AFKTrial
                     Percent("공격력 증가"); Duration(); break;
                 case SkillEffect.Pierce: Damage(); Row("적 방어력", "무시"); break;
                 case SkillEffect.ArmorStrike: Damage(); Row("방어력 추가 피해", N(number.ArmorScale) + " × 방어력"); break;
-                case SkillEffect.DrainCurrentHp: Percent("적 현재 체력 감소"); break;
+                case SkillEffect.ReduceCurrentAttack: Percent("적 현재 공격력 감소"); Row("지속 시간", "전투 종료까지"); break;
                 case SkillEffect.CurrentHp: Percent("적 현재 체력 비례 피해"); Row("적 방어력", "무시"); break;
                 case SkillEffect.Sunder: Percent("방어력 감소"); Duration(); break;
                 case SkillEffect.Weaken: Damage(); Percent("적 공격력 감소"); Duration(); break;

@@ -7,7 +7,7 @@ namespace AFKTrial
     public sealed partial class TrialRunner : MonoBehaviour
     {
         private TrialBattle battle;
-        private readonly Dictionary<string, TrialCharacterRig> rigs = new Dictionary<string, TrialCharacterRig>();
+        private readonly Dictionary<string, TrialCharacterRig> bladeRigs = new Dictionary<string, TrialCharacterRig>();
         private readonly List<(int slot, float x, float y, bool alive)> fieldDrawOrder = new List<(int, float, float, bool)>();
         private Texture2D[] portraits;
         private Texture2D hitFlash;
@@ -55,9 +55,10 @@ namespace AFKTrial
                 hitFlash = LoadTexture(data.HitTexture);
                 LoadBattleArt();
                 LoadFormationArt();
-                rigs.Clear();
+                bladeRigs.Clear();
                 foreach (var entry in data.RigResources)
-                    rigs.Add(entry.Key, new TrialCharacterRig(entry.Value));
+                    if (entry.Value == TrialCharacterRig.FrostBladeResource)
+                        bladeRigs.Add(entry.Key, new TrialCharacterRig(entry.Value));
                 battle = new TrialBattle(data);
                 LoadSkillEffects();
                 battle.SkillApplied += PlaySkillEffect;

@@ -7,7 +7,7 @@ namespace AFKTrial
     {
         None, Wave, Slow, Power, Pierce, Sunder, CurrentHp, Weaken, TeamHaste, Rally,
         Fortify, Guard, Stun, Mend, TeamArmor, Double, DoublePower, SwordOath, Taunt,
-        Blind, Equalize, MissingHp, Frenzy, Flurry, ArmorStrike, TimedTaunt, DrainCurrentHp
+        Blind, Equalize, MissingHp, Frenzy, Flurry, ArmorStrike, TimedTaunt, ReduceCurrentAttack
     }
 
     public sealed partial class TrialBattle
@@ -161,8 +161,9 @@ namespace AFKTrial
                     break;
                 case SkillEffect.Pierce: Strike(caster, target, attack, hits, true); break;
                 case SkillEffect.ArmorStrike: Strike(caster, target, attack + EffectiveArmor(caster) * numbers.ArmorScale, hits); break;
-                case SkillEffect.DrainCurrentHp:
-                    hits[Units.IndexOf(target)].HealthLoss += target.Hp * Mathf.Min(1f, fraction) * caster.RankMultiplier;
+                case SkillEffect.ReduceCurrentAttack:
+                    target.Attack *= 1f - fraction;
+                    SkillApplied?.Invoke(SkillCue.AttackDown, caster, target, Elapsed);
                     break;
                 case SkillEffect.Sunder:
                     target.Skills.DefenseDown.Set(fraction, Elapsed + numbers.Duration);

@@ -16,7 +16,7 @@ namespace AFKTrial
             float spacing = count == 2 ? .25f : .125f;
             bool weaponMotion = effect == SkillEffect.Wave || effect == SkillEffect.Pierce || effect == SkillEffect.Weaken ||
                 effect == SkillEffect.Stun || effect == SkillEffect.Double || effect == SkillEffect.Flurry ||
-                effect == SkillEffect.ArmorStrike || effect == SkillEffect.MissingHp || effect == SkillEffect.DrainCurrentHp;
+                effect == SkillEffect.ArmorStrike || effect == SkillEffect.MissingHp || effect == SkillEffect.ReduceCurrentAttack;
             if (weaponMotion)
                 while (caster.SkillSwing < count && age >= first + caster.SkillSwing * spacing - .12f)
                 {

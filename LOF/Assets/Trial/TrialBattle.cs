@@ -475,7 +475,7 @@ namespace AFKTrial
 
         private struct PendingHit
         {
-            public float Total, Piercing, Strongest, Height, HealthLoss;
+            public float Total, Piercing, Strongest, Height;
             public Unit ComboCaster;
             public float ComboStart, ComboRaw;
             public bool ComboFinal;
@@ -585,13 +585,13 @@ namespace AFKTrial
             bool allies = false, enemies = false;
             for (int i = 0; i < Units.Count; i++)
             {
-                if (hits[i].Total > 0 || hits[i].Piercing > 0 || hits[i].HealthLoss > 0)
+                if (hits[i].Total > 0 || hits[i].Piercing > 0)
                 {
                     Unit unit = Units[i];
                     float armor = EffectiveArmor(unit);
                     float damage = hits[i].Total * (100f / (100f + armor)) + hits[i].Piercing;
                     if (unit.Ally && ActiveSynergy == TrialData.Role.Defense) damage *= 0.90f;
-                    unit.LastDamage = Mathf.Min(unit.Hp, (damage + hits[i].HealthLoss) * unit.DamageTakenMultiplier);
+                    unit.LastDamage = Mathf.Min(unit.Hp, damage * unit.DamageTakenMultiplier);
                     unit.LastDamageWasBleed = false;
                     unit.LastHitTime = Elapsed;
                     unit.LastHitHeight = hits[i].Height;
@@ -607,7 +607,7 @@ namespace AFKTrial
                         }
                         float share = hits[i].ComboRaw * (100f / (100f + armor));
                         if (unit.Ally && ActiveSynergy == TrialData.Role.Defense) share *= .9f;
-                        unit.DamageComboTotal += unit.LastDamage * Mathf.Clamp01(share / Mathf.Max(.0001f, damage + hits[i].HealthLoss));
+                        unit.DamageComboTotal += unit.LastDamage * Mathf.Clamp01(share / Mathf.Max(.0001f, damage));
                         unit.DamageComboFinal = hits[i].ComboFinal;
                     }
                 }

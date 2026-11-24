@@ -55,7 +55,8 @@ namespace AFKTrial
                     throw row.Error("invalid PNG sheet layout for " + filename);
             }
             foreach (TrialBattle.SkillCue cue in Enum.GetValues(typeof(TrialBattle.SkillCue)))
-                if (!skillSheets.ContainsKey(cue)) throw new InvalidDataException("Missing VFX sheet for " + cue);
+                if (cue != TrialBattle.SkillCue.KatanaCombo && !skillSheets.ContainsKey(cue))
+                    throw new InvalidDataException("Missing VFX sheet for " + cue);
         }
 
         private void ReleaseSkillEffects()
@@ -163,7 +164,6 @@ namespace AFKTrial
                     DrawHealContact(effect, sheet, frame, anchor, width, height);
                     continue;
                 }
-                if (effect.Cue == TrialBattle.SkillCue.KatanaCombo) anchor = unit.center;
                 if (effect.Cue == TrialBattle.SkillCue.StunStars) anchor = new Vector2(point.x, unit.yMin + 13f);
                 GUI.DrawTextureWithTexCoords(new Rect(anchor.x - width / 2, anchor.y - height * sheet.PivotY, width, height),
                     sheet.Texture, sheet.FrameUV(frame, new Rect(0, 0, 1, 1)));
@@ -172,7 +172,7 @@ namespace AFKTrial
 
         private void DrawBladeEnchant(TrialBattle.Unit wielder, Rect area, SkillSheet sheet, int frame)
         {
-            if (!rigs.TryGetValue(wielder.Stats.Animation, out var rig) ||
+            if (!bladeRigs.TryGetValue(wielder.Stats.Animation, out var rig) ||
                 !rig.TryGetBladeSegment(area, wielder, BattleAnimationTime, out var guard, out var tip)) return;
 
             // The exported sword points up and right. Register its crossguard and tip to

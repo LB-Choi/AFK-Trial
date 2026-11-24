@@ -55,6 +55,11 @@ namespace AFKTrial.Editor
                         caster.SkillRank = 1;
                         caster.SkillHit = 0;
                         caster.AnimatedSkill = data.Skills[index, slot].Effect;
+                        if (hero.Id == "lion_guardian" && slot == 2)
+                        {
+                            CheckPackShield(battle, caster, target);
+                            continue;
+                        }
                         float hp = target.Hp;
                         battle.Tick(.2f);
                         Require(target.Hp == hp, hero.Id + " skill " + slot + " no windup damage");
@@ -75,10 +80,47 @@ namespace AFKTrial.Editor
             }
             catch (Exception error) { File.WriteAllText("Logs/SemiSDChecks.txt", "FAIL\n" + error); Debug.LogException(error); }
         }
+
+        static void CheckPackShield(TrialBattle battle, TrialBattle.Unit caster, TrialBattle.Unit target)
+        {
+            float originalAttack = target.Attack, hp = target.Hp;
+            target.Attack = 100;
+            int cues = 0;
+            battle.SkillApplied += (cue, source, recipient, time) =>
+            {
+                if (cue == TrialBattle.SkillCue.AttackDown && source == caster && recipient == target) cues++;
+            };
+            // Two 10% casts compound on the remaining attack. A rank above 100 caps at 100%.
+            foreach (int rank in new[] { 10, 10, 101 })
+            {
+                caster.SkillRank = rank;
+                caster.SkillHit = caster.SkillSwing = 0;
+                caster.SkillStart = battle.Elapsed;
+                float before = target.Attack, previousHit = target.LastHitTime;
+                int beforeCues = cues;
+                battle.Tick(.375f);
+                Require(target.Attack == before && cues == beforeCues, "Pack Shield frame 4 is windup");
+                battle.Tick(.125f);
+                float expected = rank == 10 ? before * .9f : 0;
+                Require(Mathf.Approximately(target.Attack, expected) && caster.SkillHit == 1 && cues == beforeCues + 1,
+                    "Pack Shield reduces remaining attack once at frame 5");
+                battle.Tick(.375f);
+                Require(Mathf.Approximately(target.Attack, expected) && target.Hp == hp && target.LastHitTime == previousHit,
+                    "Pack Shield has no health damage or hit flash");
+                var preview = battle.SkillPreview(caster.HeroIndex, 2, rank);
+                Require(preview.Contains(("적 현재 공격력 감소", rank == 10 ? "10%" : "100%")),
+                    "Pack Shield preview matches the combat percentage");
+            }
+            battle.StartBattle();
+            Require(battle.Units[3].Attack == originalAttack, "Pack Shield clears for the next encounter");
+        }
+
         static void CheckAtlas(string id, string clip)
         {
-            var texture = Resources.Load<Texture2D>("SemiSD/" + id + "/" + clip);
+            var texture = SemiSDReview.LoadAtlas(id, clip);
             Require(texture && texture.width == 1280 && texture.height == 640, id + "/" + clip + " layout");
+            if (clip == "hit")
+                Require(Resources.Load<Texture2D>("SemiSD/" + id + "/hit") == null, id + " hit sheet is editor-only");
         }
         static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     }
@@ -90,6 +132,12 @@ namespace AFKTrial.Editor
         bool play = true;
         [MenuItem("AFK Trial/Review Semi SD Animations")]
         public static void Open() { GetWindow<SemiSDReview>("Semi SD Review"); }
+        internal static Texture2D LoadAtlas(string id, string clip)
+        {
+            return clip == "hit"
+                ? AssetDatabase.LoadAssetAtPath<Texture2D>(SemiSDImporter.HitDirectory + id + ".png")
+                : Resources.Load<Texture2D>("SemiSD/" + id + "/" + clip);
+        }
         void Update() { if (play) { frame = (int)(EditorApplication.timeSinceStartup * 8) % 8; Repaint(); } }
         void OnGUI()
         {
@@ -100,7 +148,7 @@ namespace AFKTrial.Editor
             clipIndex = EditorGUILayout.Popup("Clip", clipIndex, clips);
             play = EditorGUILayout.Toggle("Play preview", play);
             frame = EditorGUILayout.IntSlider("Frame", frame + 1, 1, 8) - 1;
-            var texture = Resources.Load<Texture2D>("SemiSD/" + ids[character] + "/" + clips[clipIndex]);
+            var texture = LoadAtlas(ids[character], clips[clipIndex]);
             Rect rect = GUILayoutUtility.GetRect(320, 320, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             EditorGUI.DrawRect(rect, new Color(.15f, .19f, .25f));
             float size = Mathf.Min(rect.width, rect.height);

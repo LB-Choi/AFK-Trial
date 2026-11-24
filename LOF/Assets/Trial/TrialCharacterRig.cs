@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace AFKTrial
 {
-    // Spine region attachments with stepped slot timelines for hand-drawn action poses.
+    // The battle uses the rig timelines for attack timing and the ice sword's effect anchors.
     public sealed class TrialCharacterRig
     {
         public class Bone { public string name, parent; public float x, y; }
@@ -24,19 +24,16 @@ namespace AFKTrial
             public Dictionary<string, Clip> animations;
         }
 
-        private sealed class Drawing
+        internal const string FrostBladeResource = "IceKnightRig/IceKnight";
+
+        private sealed class BladePose
         {
-            public Texture2D Texture;
             public Rect Bounds;
-            public Vector2 BladeGuard, BladeTip;
-            public Rect ScreenBounds(Vector2 origin, float scale) =>
-                new Rect(origin + Bounds.position * scale, Bounds.size * scale);
+            public Vector2 Guard, Tip;
         }
 
-        private readonly bool hasSetupPose;
-        private readonly Slot[] slots;
-        private readonly Dictionary<string, Drawing>[] drawings;
-        private readonly int bladeSlot = -1;
+        private readonly Slot bladeSlot;
+        private readonly Dictionary<string, BladePose> bladePoses;
         private readonly Clip idle, walk, attack;
         private readonly float breathCycle, stride, recovery;
         public readonly float ImpactTime;
@@ -61,7 +58,6 @@ namespace AFKTrial
 
         public TrialCharacterRig(string resource)
         {
-            string folder = resource.Substring(0, resource.LastIndexOf('/') + 1);
             Data data = ReadData(resource);
 
             if (data.animations.TryGetValue("idle", out idle))
@@ -74,7 +70,10 @@ namespace AFKTrial
             stride = Duration(walk);
             recovery = Duration(attack);
             ImpactTime = ImpactMarker(attack);
+            if (resource != FrostBladeResource) return;
 
+            bladeSlot = Array.Find(data.slots, slot => slot.name == "pose");
+            if (bladeSlot == null) throw new InvalidDataException("Missing ice sword pose slot: " + resource);
             var origins = new Dictionary<string, Vector2>();
             foreach (Bone bone in data.bones)
             {
@@ -82,38 +81,20 @@ namespace AFKTrial
                 origins.Add(bone.name, parent + new Vector2(bone.x, -bone.y));
             }
 
-            slots = data.slots;
-            hasSetupPose = Array.Exists(slots, slot => slot.attachment != null);
-            drawings = new Dictionary<string, Drawing>[slots.Length];
-            for (int i = 0; i < slots.Length; i++)
+            var origin = origins[bladeSlot.bone];
+            var regions = data.skins[0].attachments[bladeSlot.name];
+            bladePoses = new Dictionary<string, BladePose>();
+            string directory = Path.Combine(Application.streamingAssetsPath, "SkillEffects");
+            foreach (var row in CsvRow.Read(directory, "IceKnightBlade"))
             {
-                Slot slot = slots[i];
-                drawings[i] = new Dictionary<string, Drawing>();
-                Vector2 origin = origins[slot.bone];
-                foreach (var entry in data.skins[0].attachments[slot.name])
-                {
-                    Region region = entry.Value;
-                    var texture = Resources.Load<Texture2D>(folder + entry.Key);
-                    if (!texture) throw new InvalidDataException("Missing rig texture " + entry.Key);
-                    drawings[i].Add(entry.Key, new Drawing {
-                        Texture = texture,
-                        Bounds = new Rect(origin.x + region.x - region.width / 2,
-                            origin.y - region.y - region.height / 2, region.width, region.height)
-                    });
-                }
-            }
-            if (resource == "IceKnightRig/IceKnight")
-            {
-                bladeSlot = Array.FindIndex(slots, slot => slot.name == "pose");
-                string directory = Path.Combine(Application.streamingAssetsPath, "SkillEffects");
-                foreach (var row in CsvRow.Read(directory, "IceKnightBlade"))
-                {
-                    string attachment = row.Text("attachment");
-                    if (bladeSlot < 0 || !drawings[bladeSlot].TryGetValue(attachment, out Drawing pose))
-                        throw row.Error("unknown blade attachment " + attachment);
-                    pose.BladeGuard = new Vector2(row.Number("guardX"), row.Number("guardY"));
-                    pose.BladeTip = new Vector2(row.Number("tipX"), row.Number("tipY"));
-                }
+                string attachment = row.Text("attachment");
+                if (!regions.TryGetValue(attachment, out var region)) throw row.Error("unknown blade attachment " + attachment);
+                bladePoses.Add(attachment, new BladePose {
+                    Bounds = new Rect(origin.x + region.x - region.width / 2,
+                        origin.y - region.y - region.height / 2, region.width, region.height),
+                    Guard = new Vector2(row.Number("guardX"), row.Number("guardY")),
+                    Tip = new Vector2(row.Number("tipX"), row.Number("tipY"))
+                });
             }
         }
 
@@ -152,11 +133,14 @@ namespace AFKTrial
             return area.center + Vector2.up * ((151 - height) * scale);
         }
 
-        private Drawing SelectDrawing(int index, Clip clip, float time)
+        internal bool TryGetBladeSegment(Rect area, TrialBattle.Unit unit, float elapsed,
+            out Vector2 guard, out Vector2 tip)
         {
-            Slot slot = slots[index];
-            string name = slot.attachment;
-            if (clip != null && clip.slots.TryGetValue(slot.name, out Track track))
+            guard = tip = Vector2.zero;
+            if (bladeSlot == null) return false;
+            Clip clip = SelectClip(unit, elapsed, out float time);
+            string name = bladeSlot.attachment;
+            if (clip != null && clip.slots.TryGetValue(bladeSlot.name, out Track track))
             {
                 foreach (Key key in track.attachment)
                 {
@@ -164,39 +148,12 @@ namespace AFKTrial
                     name = key.name;
                 }
             }
-            return name == null ? null : drawings[index][name];
-        }
-
-        internal bool TryGetBladeSegment(Rect area, TrialBattle.Unit unit, float elapsed,
-            out Vector2 guard, out Vector2 tip)
-        {
-            guard = tip = Vector2.zero;
-            if (bladeSlot < 0) return false;
-            Clip clip = SelectClip(unit, elapsed, out float time);
-            Drawing pose = SelectDrawing(bladeSlot, clip, time);
-            if (pose == null || pose.BladeGuard == pose.BladeTip) return false;
+            if (name == null || !bladePoses.TryGetValue(name, out var pose) || pose.Guard == pose.Tip) return false;
             Vector2 origin = ScreenPointAtHeight(area, 0, out float scale);
-            Rect bounds = pose.ScreenBounds(origin, scale);
-            guard = Rect.NormalizedToPoint(bounds, pose.BladeGuard);
-            tip = Rect.NormalizedToPoint(bounds, pose.BladeTip);
+            var bounds = new Rect(origin + pose.Bounds.position * scale, pose.Bounds.size * scale);
+            guard = Rect.NormalizedToPoint(bounds, pose.Guard);
+            tip = Rect.NormalizedToPoint(bounds, pose.Tip);
             return true;
-        }
-
-        public void Draw(Rect area, TrialBattle.Unit unit, float elapsed, Texture2D portrait)
-        {
-            if (Event.current.type != EventType.Repaint) return;
-            Clip clip = SelectClip(unit, elapsed, out float time);
-            if (clip == null && !hasSetupPose)
-            {
-                GUI.DrawTexture(area, portrait, ScaleMode.ScaleToFit);
-                return;
-            }
-            Vector2 origin = ScreenPointAtHeight(area, 0, out float scale);
-            for (int i = 0; i < slots.Length; i++)
-            {
-                Drawing pose = SelectDrawing(i, clip, time);
-                if (pose != null) GUI.DrawTexture(pose.ScreenBounds(origin, scale), pose.Texture);
-            }
         }
     }
 }
