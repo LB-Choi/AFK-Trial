@@ -10,6 +10,7 @@ namespace AFKTrial
         private int revealedKnight;
         private float ceremonyAge;
         private const float PaperArrival = .72f, StampImpact = .22f, DoorStart = .92f, DoorEnd = 2.12f;
+        private const float StampRelease = StampImpact + .14f, StampExit = StampRelease + .28f;
 
         private void BeginSummonCeremony(TrialBattle.Pull[] pulls)
         {
@@ -104,20 +105,22 @@ namespace AFKTrial
             ArcadeText(new Rect(paper.x, y + h * .42f, w, 40), "그대를 기사단의 일원으로 임명한다.", 19, ink, TextAnchor.MiddleCenter);
             float size = h * .21f;
             var mark = new Rect(paper.x + w * .70f, y + h * .60f, size, size);
-            var tint = GUI.color;
-            bool struck = sealedPaper && ceremonyAge >= StampImpact;
-            GUI.color = struck ? new Color(.68f, .12f, .08f, 1) : new Color(.36f, .23f, .18f, .29f);
-            GUI.DrawTexture(mark, FeatureTexture("KnightUI/OrderSeal"));
-            GUI.color = tint;
-            if (sealedPaper && ceremonyAge < .48f)
+            if (sealedPaper && ceremonyAge >= StampImpact)
+            {
+                var tint = GUI.color;
+                GUI.color = new Color(.68f, .12f, .08f, 1);
+                GUI.DrawTexture(mark, FeatureTexture("KnightUI/OrderSeal"));
+                GUI.color = tint;
+            }
+            if (sealedPaper && ceremonyAge < StampExit)
             {
                 float lift = ceremonyAge < StampImpact ? 1 - ceremonyAge / StampImpact :
-                    Mathf.InverseLerp(StampImpact, .48f, ceremonyAge);
+                    Mathf.SmoothStep(0, 1, Mathf.InverseLerp(StampRelease, StampExit, ceremonyAge));
                 float diameter = size * (1 + lift * .45f);
                 var stampArt = FeatureTexture("SummonUI/Stamp");
                 float stampHeight = diameter * stampArt.height / stampArt.width;
                 var stamp = new Rect(mark.center.x - diameter / 2 + 65 * lift,
-                    mark.center.y - stampHeight - lift * height * .53f, diameter, stampHeight);
+                    mark.center.y - stampHeight / 2 - lift * height, diameter, stampHeight);
                 GUI.DrawTexture(stamp, stampArt);
             }
             if (!sealedPaper && ceremonyAge >= PaperArrival)
