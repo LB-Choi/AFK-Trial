@@ -8,7 +8,7 @@ namespace AFKTrial.Editor
     {
         private void OnPreprocessAudio()
         {
-            if (assetPath != "Assets/Resources/Audio/Background.wav") return;
+            if (assetPath != "Assets/Resources/Audio/Background.ogg") return;
             var importer = (AudioImporter)assetImporter;
             var settings = importer.defaultSampleSettings;
             settings.loadType = UnityEngine.AudioClipLoadType.Streaming;

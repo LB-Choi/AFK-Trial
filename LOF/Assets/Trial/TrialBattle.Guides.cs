@@ -4,8 +4,10 @@ namespace AFKTrial
 {
     public sealed partial class TrialBattle
     {
-        public enum Guide { FirstBattle, Growth, Equipment, BossDefeat, Dungeon, Idle }
-        public const int GuideMask = 63;
+        public enum Guide { FirstBattle, Growth, Equipment, BossDefeat, Dungeon, Idle, BossCaptain, BossCommander }
+        public const int GuideMask = 255;
+        public Guide? CurrentBossGuide => ActiveBoss == null || Finished ? (Guide?)null :
+            ActiveBoss.Stats.Id == "boss" ? Guide.BossCaptain : Guide.BossCommander;
         private int guideReady = 1, guideSeen, guideSkipped;
         public bool GuidePending(Guide guide) => (guideReady & (1 << (int)guide)) != 0 && !GuideSeen(guide);
         public bool GuideSeen(Guide guide) => (guideSeen & (1 << (int)guide)) != 0;

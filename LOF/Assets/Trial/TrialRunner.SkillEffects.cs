@@ -80,6 +80,8 @@ namespace AFKTrial
 
         private void PlaySkillEffect(TrialBattle.SkillCue cue, TrialBattle.Unit caster, TrialBattle.Unit recipient, float time)
         {
+            // The approved katana actor atlas already draws the vertical/horizontal plus slash.
+            if (cue == TrialBattle.SkillCue.KatanaCombo) return;
             PruneSkillEffects();
             var from = caster;
             float start = time;

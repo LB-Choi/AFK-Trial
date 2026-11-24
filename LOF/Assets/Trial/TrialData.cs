@@ -246,7 +246,7 @@ namespace AFKTrial
             if (HitSparkPivot.x > 1 || HitSparkPivot.y > 1) throw fx.Error("spark pivot must lie inside its atlas cell");
         }
 
-        private static Fighter ReadFighter(CsvRow row, string animation, Dictionary<string, float> impacts)
+        private Fighter ReadFighter(CsvRow row, string animation, Dictionary<string, float> impacts)
         {
             var fighter = new Fighter {
                 Id = row.Text("id"), Name = row.Text("name"), Hp = row.Number("hp", true),
@@ -255,6 +255,8 @@ namespace AFKTrial
             };
             if (animation.Length > 0 && !impacts.TryGetValue(animation, out fighter.ImpactSeconds))
                 throw row.Error("unknown animation " + animation);
+            if (animation.Length > 0)
+                fighter.AttackDuration = TrialCharacterRig.AttackDurationAtImpact(RigResources[animation], fighter.ImpactSeconds);
             return fighter;
         }
     }

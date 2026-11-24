@@ -11,6 +11,8 @@ namespace AFKTrial
         private int bossHistoryIndex;
         private Vector2 bossComparisonScroll;
         private bool HasBossReview => bossReview != null;
+        private bool BossReviewAllowsFarming => bossResultPending && bossReview != null &&
+            !bossReview.won && battle.Farming && string.IsNullOrEmpty(idleSaveError);
 
         private void ShowCompletedBoss()
         {
@@ -38,9 +40,16 @@ namespace AFKTrial
             if (bossResultPending && !string.IsNullOrEmpty(idleSaveError)) return;
             if (bossResultPending)
             {
-                if (retry && !bossReview.won && bossReview.stage == battle.Next) battle.Retry();
-                else battle.StartBattle();
-                accumulator = restartDelay = 0;
+                if (retry && !bossReview.won && bossReview.stage == battle.Next)
+                {
+                    battle.Retry();
+                    accumulator = restartDelay = 0;
+                }
+                else if (!BossReviewAllowsFarming)
+                {
+                    battle.StartBattle();
+                    accumulator = restartDelay = 0;
+                }
                 CheckpointProgress();
             }
             bossReview = bossPrevious = null;
@@ -126,10 +135,12 @@ namespace AFKTrial
             }
             GUI.EndScrollView();
             bool failed = bossResultPending && !string.IsNullOrEmpty(idleSaveError);
-            GUI.Label(new Rect(20, h - 78, w - 40, 23), failed ? "저장 실패: 재저장 후 진행할 수 있습니다." : "같은 조건의 기록을 비교하세요. 승패는 성장 외 전투 상황에도 영향을 받습니다.", small);
+            GUI.Label(new Rect(20, h - 78, w - 40, 23), failed ? "저장 실패: 재저장 후 진행할 수 있습니다." : BossReviewAllowsFarming
+                ? "이전 단계 자동 파밍 중 · 결과창을 닫지 않아도 전투와 보상 획득이 계속됩니다."
+                : "같은 조건의 기록을 비교하세요. 승패는 성장 외 전투 상황에도 영향을 받습니다.", small);
             float bw = (w - 56) / 3;
             GUI.enabled = !failed;
-            if (GUI.Button(new Rect(20, h - 46, bw, 32), bossResultPending ? "전투 계속" : "닫기", button)) CloseBossReview(false, false);
+            if (GUI.Button(new Rect(20, h - 46, bw, 32), bossResultPending && !BossReviewAllowsFarming ? "전투 계속" : "닫기", button)) CloseBossReview(false, false);
             if (GUI.Button(new Rect(28 + bw, h - 46, bw, 32), "성장·편성", button)) CloseBossReview(true, false);
             GUI.enabled = true;
             if (failed)

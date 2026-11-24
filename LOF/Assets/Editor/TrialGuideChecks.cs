@@ -40,7 +40,7 @@ namespace AFKTrial.Editor
                 restored.GuideSeen(TrialBattle.Guide.Dungeon), "old progress suppresses historical guides");
             legacy.highest = 0; legacy.stage = 1;
             Require(restored.RestoreProgress(legacy) && !restored.GuideSeen(TrialBattle.Guide.Dungeon), "old early progress retains future dungeon guide");
-            legacy.guideVersion = 1; legacy.guideSeen = 128;
+            legacy.guideVersion = 1; legacy.guideSeen = 256;
             Require(!restored.RestoreProgress(legacy), "invalid flags rejected");
 
             string folder = Path.Combine(Application.temporaryCachePath, "guides-" + Guid.NewGuid());
@@ -123,8 +123,34 @@ namespace AFKTrial.Editor
                         float textHeight = style.CalcHeight(new GUIContent(text), 424);
                         Require(textHeight > 0 && textHeight <= 165, "Korean guide text fits allocated panel height");
                     }
+                    for (int index = 6; index < 8; index++)
+                        Require(style.CalcHeight(new GUIContent((string)Call("GuideText", index)), 424) <= 165,
+                            "Korean boss guide fits allocated panel height");
                 }
                 finally { UnityEngine.Object.DestroyImmediate(font); }
+                Set("editing", false); Set("activeGuide", -1); Set("guideReplay", false);
+                // The legacy fixture uses one boss for both slots; exercise both shipped bosses.
+                var bossData = TrialData.Load();
+                battle = new TrialBattle(bossData); Set("battle", battle);
+                var bossState = battle.CaptureProgress();
+                bossState.stage = bossData.BossEvery; bossState.highest = bossData.BossEvery - 1;
+                bossState.farming = false; bossState.repeatStage = 0;
+                Require(battle.RestoreProgress(bossState), "boss entry fixture");
+                Set("guideNotBefore", double.MaxValue); Call("Update");
+                Require((int)Get("activeGuide") == 6 && battle.Elapsed == 0, "first boss guide precedes combat and ignores cooldown");
+                Call("Update"); Require(battle.Elapsed == 0, "boss guide pauses combat");
+                Call("DismissGuide", false);
+                var copy = new TrialBattle(bossData);
+                Require(copy.RestoreProgress(JsonUtility.FromJson<TrialBattle.Progress>(JsonUtility.ToJson(battle.CaptureProgress()))) &&
+                    copy.GuideSeen(TrialBattle.Guide.BossCaptain), "boss acknowledgement persists");
+                battle.StartBattle(); Call("UpdateGuides");
+                Require((int)Get("activeGuide") == -1, "same boss retry does not repeat guide");
+                bossState = battle.CaptureProgress(); bossState.stage = bossData.RoundLength; bossState.highest = bossData.RoundLength - 1;
+                Require(battle.RestoreProgress(bossState), "second boss fixture"); Call("Update");
+                Require((int)Get("activeGuide") == 7 && battle.Elapsed == 0, "second boss has independent entry guide");
+                Set("guideReplay", true);
+                before = JsonUtility.ToJson(battle.CaptureProgress()); Call("DismissGuide", false);
+                Require(before == JsonUtility.ToJson(battle.CaptureProgress()), "boss help replay does not change acknowledgement");
                 var fresh = new TrialBattle(data);
                 Require(fresh.GuidePending(TrialBattle.Guide.FirstBattle) && !fresh.GuideSeen(TrialBattle.Guide.Growth), "reset starts fresh");
             }

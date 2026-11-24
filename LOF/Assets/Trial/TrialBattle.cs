@@ -10,6 +10,7 @@ namespace AFKTrial
         public readonly TrialData Data;
         public enum SoundCue { Hit, BossWarning, BossSpecial, Reward }
         public event Action<SoundCue> SoundRequested;
+        public event Action<Unit, bool, bool> WeaponSoundRequested;
         public readonly IReadOnlyList<string> Heroes;
         private readonly int[] formation;
         public bool BossStage => ActiveStage > 0 && ActiveStage % Data.BossEvery == 0;
@@ -63,6 +64,14 @@ namespace AFKTrial
             public bool SpecialAttackPending { get; internal set; }
             public float SpecialWarningStarted { get; internal set; }
             public float SwingStart = float.NegativeInfinity;
+            public bool SwingSoundPlayed, SwingWasSpecial;
+            public float SkillStart = float.NegativeInfinity;
+            public int LastSkillSlot, SkillRank, SkillHit, SkillSwing;
+            public SkillEffect AnimatedSkill;
+            public Unit SkillTarget, DamageComboCaster;
+            public float DamageComboStart = float.NegativeInfinity, DamageComboTotal;
+            public bool DamageComboFinal;
+            public Vector2 DamageComboPosition;
             public float LastHitTime = float.NegativeInfinity;
             public float LastDamage, LastHitHeight;
             internal bool LastDamageWasBleed;
@@ -467,6 +476,9 @@ namespace AFKTrial
         private struct PendingHit
         {
             public float Total, Piercing, Strongest, Height, HealthLoss;
+            public Unit ComboCaster;
+            public float ComboStart, ComboRaw;
+            public bool ComboFinal;
 
             public void Add(Unit attacker, float amount, bool pierce)
             {
@@ -495,10 +507,19 @@ namespace AFKTrial
                 unit.Walking = false;
                 if (!unit.Alive) continue;
                 UpdateSkillEffects(unit, dt);
+                if (TickAnimatedSkill(unit, hits)) continue;
                 if (unit.Skills.StunnedUntil > Elapsed) continue;
                 float speed = SpeedMultiplier(unit);
                 unit.Cooldown = Mathf.Max(0, unit.Cooldown - dt * speed);
+                // Finish the landed attack before another action can replace its recovery poses.
+                if (!unit.WindingUp && (Elapsed - unit.SwingStart) * unit.SwingSpeed < unit.Stats.AttackDuration) continue;
                 if (unit.Target == null) continue;
+                // A ready skill owns the next action boundary, before a new basic attack starts.
+                if (unit.Ally)
+                {
+                    TryCastSkill(unit, hits);
+                    if (Elapsed - unit.SkillStart < 1f) continue;
+                }
                 var destination = AttackPosition(unit, out bool flanking);
                 bool fixedReach = unit.Stats.ContactDistance > 0;
                 bool inReach = fixedReach ? (unit.Position - destination).sqrMagnitude <= .01f * .01f :
@@ -540,8 +561,15 @@ namespace AFKTrial
                         if (!unit.WindingUp)
                         {
                             unit.SwingStart = Elapsed;
+                            unit.SwingSoundPlayed = false;
+                            unit.SwingWasSpecial = unit.SpecialAttackPending;
                             unit.SwingSpeed = Mathf.Max(1, impact / unit.Stats.Interval) * speed;
                             unit.WindingUp = true;
+                        }
+                        if (!unit.SwingSoundPlayed && (Elapsed - unit.SwingStart) * unit.SwingSpeed >= Mathf.Max(0, impact - .12f * unit.SwingSpeed))
+                        {
+                            unit.SwingSoundPlayed = true;
+                            WeaponSoundRequested?.Invoke(unit, false, unit.SpecialAttackPending);
                         }
                         if ((Elapsed - unit.SwingStart) * unit.SwingSpeed + 0.00001f < impact) continue;
                         unit.WindingUp = false;
@@ -568,6 +596,20 @@ namespace AFKTrial
                     unit.LastHitTime = Elapsed;
                     unit.LastHitHeight = hits[i].Height;
                     unit.Hp -= unit.LastDamage;
+                    if (hits[i].ComboCaster != null)
+                    {
+                        if (unit.DamageComboCaster != hits[i].ComboCaster || unit.DamageComboStart != hits[i].ComboStart)
+                        {
+                            unit.DamageComboTotal = 0;
+                            unit.DamageComboPosition = unit.Position;
+                            unit.DamageComboCaster = hits[i].ComboCaster;
+                            unit.DamageComboStart = hits[i].ComboStart;
+                        }
+                        float share = hits[i].ComboRaw * (100f / (100f + armor));
+                        if (unit.Ally && ActiveSynergy == TrialData.Role.Defense) share *= .9f;
+                        unit.DamageComboTotal += unit.LastDamage * Mathf.Clamp01(share / Mathf.Max(.0001f, damage + hits[i].HealthLoss));
+                        unit.DamageComboFinal = hits[i].ComboFinal;
+                    }
                 }
                 if (!Units[i].Alive) continue;
                 if (Units[i].Ally) allies = true; else enemies = true;

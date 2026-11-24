@@ -100,7 +100,7 @@ namespace AFKTrial
             var image = portraits[hero];
             string id = battle.Data.Heroes[hero].Id;
             float focalX = PortraitFocus(hero);
-            float topCrop = id == "banner_paladin" ? 0.18f : 0.01f;
+            float topCrop = 0.01f;
             float height = Mathf.Max(area.height * 1.28f, area.width * 1.25f);
             float width = height * image.width / image.height;
             GUI.BeginGroup(area);
@@ -115,7 +115,7 @@ namespace AFKTrial
         private float PortraitFocus(int hero)
         {
             string id = battle.Data.Heroes[hero].Id;
-            return id == "sun_paladin" ? 0.8f : id == "banner_paladin" ? 0.61f : 0.5f;
+            return 0.5f;
         }
 
         private void DrawRosterCard(Rect card, int hero, int deployedSlot, bool selected)

@@ -7,8 +7,8 @@ namespace AFKTrial.Editor
         public static void Check()
         {
             var background = Resources.Load<AudioClip>("Audio/Background");
-            if (background != null)
-                throw new InvalidOperationException("The user-rejected base ambience must not ship as Background.");
+            if (background == null || background.length < 10)
+                throw new InvalidOperationException("Approved Hope soundtrack is missing.");
             foreach (string name in new[] { "CombatHit", "BossWarning", "BossSpecial", "Reward" })
             {
                 var clip = Resources.Load<AudioClip>("Audio/" + name);

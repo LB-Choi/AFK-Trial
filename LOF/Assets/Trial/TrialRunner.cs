@@ -18,7 +18,8 @@ namespace AFKTrial
         private int selectedSlot;
         private bool sideBattle;
         private float accumulator, restartDelay;
-        private float BattleAnimationTime => battle.Elapsed + restartDelay;
+        private float finishedAnimationAge;
+        private float BattleAnimationTime => battle.Elapsed + Mathf.Max(restartDelay, finishedAnimationAge);
         private bool heroesFromMenu;
         private GUIStyle title, label, small, button, damage;
 
@@ -48,7 +49,7 @@ namespace AFKTrial
                 var data = TrialData.Load();
                 portraits = new Texture2D[data.Heroes.Count];
                 for (int i = 0; i < portraits.Length; i++)
-                    portraits[i] = LoadTexture(data.Heroes[i].Portrait);
+                    portraits[i] = LoadUnifiedPortrait(data.Heroes[i].Animation);
                 hitFlash = LoadTexture(data.HitTexture);
                 LoadBattleArt();
                 LoadFormationArt();
@@ -81,11 +82,16 @@ namespace AFKTrial
         {
             if (Application.isPlaying) EnsureAudio();
             if (battle == null || progressLock == null) return;
+            if (!battle.Finished) finishedAnimationAge = 0;
+            else if (!suspended) finishedAnimationAge = Mathf.Min(2f, finishedAnimationAge + Time.deltaTime);
             if (RefreshLifecycle() || suspended) return;
             UpdateGuides();
             if (Time.realtimeSinceStartupAsDouble >= nextCheckpoint) CheckpointProgress();
             if (GuideOpen) return;
-            if (HasPendingIdleReward || HasDungeonResult || showRecruit || SystemMenuOpen || HasBossReview) return;
+            if (!atTitle && battle.CurrentBossGuide.HasValue &&
+                !battle.GuideSeen(battle.CurrentBossGuide.Value)) return;
+            if (HasPendingIdleReward || HasDungeonResult || showRecruit || SystemMenuOpen ||
+                (HasBossReview && !BossReviewAllowsFarming)) return;
             ResumeBattleAfterAway();
             if (battle.Finished)
             {
@@ -376,7 +382,8 @@ namespace AFKTrial
             Color previous = GUI.color;
             GUI.color = unit.Alive ? Color.white : Color.gray;
             var portrait = unit.Ally ? portraits[unit.HeroIndex] : null;
-            if (rigs.TryGetValue(unit.Stats.Animation, out var rig)) rig.Draw(area, unit, BattleAnimationTime, portrait);
+            if (DrawSemiSD(area, unit)) { }
+            // Missing new art must never silently switch back to the old character design.
             else GUI.DrawTexture(area, portrait, ScaleMode.ScaleToFit);
             GUI.color = previous;
         }
@@ -541,14 +548,16 @@ namespace AFKTrial
         {
             float age = BattleAnimationTime - unit.LastHitTime;
             if (!showDamageNumbers || age >= 0.7f || unit.LastDamage <= 0) return;
-            float top = Mathf.Max(65, headY - 45 - age * 26);
+            bool combo = unit.DamageComboCaster != null && BattleAnimationTime - unit.DamageComboStart < 1.7f;
+            if (combo) { var anchor = FieldPoint(unit.DamageComboPosition); x = anchor.x; headY = anchor.y; }
+            float top = Mathf.Max(65, headY - 45 - (combo ? 0 : age * 26));
             Rect bounds = new Rect(x - 45, top, 90, 30);
-            string number = "-" + unit.LastDamage.ToString("0.##");
+            string number = "-" + (combo ? unit.DamageComboTotal : unit.LastDamage).ToString("0.##");
             float opacity = Mathf.Clamp01((0.7f - age) * 5);
             damage.normal.textColor = new Color(0.04f, 0.06f, 0.09f, opacity);
             GUI.Label(new Rect(bounds.x + 1, bounds.y + 2, bounds.width, bounds.height), number, damage);
             var tone = unit.Ally ? new Color32(251, 174, 154, 255) : new Color32(255, 225, 169, 255);
-            damage.normal.textColor = new Color(tone.r / 255f, tone.g / 255f, tone.b / 255f, opacity);
+            damage.normal.textColor = combo && unit.DamageComboFinal ? new Color(.85f, .16f, .06f, opacity) : new Color(tone.r / 255f, tone.g / 255f, tone.b / 255f, opacity);
             GUI.Label(bounds, number, damage);
         }
 

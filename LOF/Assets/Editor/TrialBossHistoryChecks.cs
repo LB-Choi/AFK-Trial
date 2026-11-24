@@ -110,6 +110,51 @@ namespace AFKTrial.Editor
                 Call("CheckpointProgress", false);
                 Call("CloseBossReview", false, true);
                 Require(!battle.Finished && !battle.ActiveFarming && battle.ActiveStage == battle.Next, "successful save allows same-boss retry");
+                Finish(false, .3f); Call("ShowCompletedBoss");
+                object Get(string name) => typeof(TrialRunner).GetField(name, flags).GetValue(runner);
+                string review = JsonUtility.ToJson(Get("bossReview"));
+                foreach (TrialBattle.Guide guide in Enum.GetValues(typeof(TrialBattle.Guide))) battle.CompleteGuide(guide, false);
+                Set("atTitle", false); Set("nextCheckpoint", double.MaxValue);
+                using (var session = new FileStream(Path.Combine(folder, "session.lock"), FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+                {
+                    Set("progressLock", session);
+                    try
+                    {
+                        Set("restartDelay", data.RestartDelay + 1); Call("Update");
+                        Require(!battle.Finished && battle.ActiveFarming && battle.ActiveStage == battle.Highest,
+                            "defeat popup starts lower stage without dismissal");
+                        Set("accumulator", .1f); Call("Update");
+                        Require(battle.Elapsed > 0 && JsonUtility.ToJson(Get("bossReview")) == review,
+                            "combat advances while original defeat snapshot remains visible");
+                        float elapsed = battle.Elapsed;
+                        Set("systemMenu", Enum.Parse(typeof(TrialRunner).GetNestedType("SystemMenu", BindingFlags.NonPublic), "Settings"));
+                        Set("accumulator", .1f); Call("Update");
+                        Require(battle.Elapsed == elapsed, "settings still pauses farming behind result");
+                        Set("systemMenu", Enum.Parse(typeof(TrialRunner).GetNestedType("SystemMenu", BindingFlags.NonPublic), "Closed"));
+                        int gold = battle.Gold;
+                        end.Invoke(battle, new object[] { true });
+                        int credited = battle.Gold;
+                        Require(credited > gold, "background farming grants normal reward");
+                        end.Invoke(battle, new object[] { true });
+                        Require(battle.Gold == credited, "background farming reward credited once");
+                        Call("ShowCompletedBoss");
+                        Set("restartDelay", data.RestartDelay + 1); Call("Update");
+                        Require(!battle.Finished && JsonUtility.ToJson(Get("bossReview")) == review,
+                            "farming repeats without replacing defeat popup");
+                        Set("accumulator", .1f); Call("Update");
+                        elapsed = battle.Elapsed;
+                        var unit = battle.Units[0];
+                        Call("CloseBossReview", false, false);
+                        Require(Get("bossReview") == null && battle.Elapsed == elapsed && ReferenceEquals(unit, battle.Units[0]),
+                            "closing popup preserves ongoing farming encounter");
+                        battle.Retry(); Finish(false, .2f); Call("ShowCompletedBoss");
+                        Set("restartDelay", data.RestartDelay + 1); Call("Update");
+                        Call("CloseBossReview", false, true);
+                        Require(!battle.ActiveFarming && battle.ActiveStage == battle.Next && battle.Elapsed == 0,
+                            "retry switches running farm to requested boss");
+                    }
+                    finally { Set("progressLock", null); }
+                }
             }
             finally { UnityEngine.Object.DestroyImmediate(host); Directory.Delete(folder, true); }
         }

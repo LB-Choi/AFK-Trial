@@ -32,6 +32,8 @@ namespace AFKTrial
         {
             public int highest, stage, gold, experience, tickets, duplicateStreak;
             public int completedGoals;
+            public bool goalIntroClaimed;
+            public int goalBossClaimed, goalRoundClaimed;
             public int guideVersion, guideReady, guideSeen, guideSkipped;
             // The version 1 save format requires a positive team baseline. Hero records carry absolute levels.
             public int level = 1;
@@ -84,6 +86,7 @@ namespace AFKTrial
                 items[i] = CaptureItem(inventory[i]);
             return new Progress {
                 completedGoals = CompletedGoals,
+                goalIntroClaimed = goalIntroClaimed, goalBossClaimed = goalBossClaimed, goalRoundClaimed = goalRoundClaimed,
                 guideVersion = 1, guideReady = guideReady, guideSeen = guideSeen, guideSkipped = guideSkipped,
                 highest = Highest, stage = Stage, farming = Farming, gold = Gold, repeatStage = RepeatStage,
                 experience = Experience, tickets = Tickets, duplicateStreak = duplicateStreak,
@@ -96,7 +99,7 @@ namespace AFKTrial
 
         public bool RestoreProgress(Progress saved)
         {
-            if (saved == null || (saved.completedGoals & ~GoalMask) != 0 || !ValidGuides(saved) || saved.highest < 0 || saved.highest == int.MaxValue || saved.stage < 0 ||
+            if (saved == null || !ValidGoalRewards(saved) || (saved.completedGoals & ~GoalMask) != 0 || !ValidGuides(saved) || saved.highest < 0 || saved.highest == int.MaxValue || saved.stage < 0 ||
                 (saved.farming ? saved.stage > saved.highest : saved.stage != saved.highest + 1) ||
                 saved.repeatStage < 0 || saved.repeatStage > saved.highest ||
                 saved.level < 1 || saved.gold < 0 || saved.experience < 0 || saved.tickets < 0 ||
@@ -151,6 +154,9 @@ namespace AFKTrial
             }
 
             completedGoals = saved.completedGoals;
+            goalIntroClaimed = saved.goalIntroClaimed;
+            goalBossClaimed = saved.goalBossClaimed;
+            goalRoundClaimed = saved.goalRoundClaimed;
             RestoreGuides(saved);
             pendingSummons = CopyReceipts(saved.pendingSummons);
             Highest = saved.highest;

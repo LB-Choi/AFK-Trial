@@ -10,7 +10,8 @@ namespace AFKTrial
         private bool GuideOpen => activeGuide >= 0;
         private static readonly string[] GuideTitles = {
             "자동 전투와 기사 성장", "첫 레벨업을 할 수 있어요", "획득한 장비를 장착하세요",
-            "보스에게 다시 도전하세요", "재화 던전이 열렸어요", "방치 보상을 확인하세요"
+            "보스에게 다시 도전하세요", "재화 던전이 열렸어요", "방치 보상을 확인하세요",
+            "도적 분대장 · 충격 강타", "도적 대장 · 출혈 베기"
         };
         private static readonly string[] GuideTexts = {
             "전투는 자동으로 진행됩니다. 상단에서 스테이지와 남은 시간을 확인하세요.\n\n영웅 메뉴에서 기사를 성장시키고 편성 메뉴에서 출전 기사를 바꿀 수 있습니다.",
@@ -20,6 +21,16 @@ namespace AFKTrial
             "첫 보스를 클리어해 골드 금고와 경험치 기록보관소가 열렸습니다. 홀 → 던전에서 필요한 재화를 선택하세요.\n\n쉬움부터 순서대로 해금하며 각 던전·난이도의 최초 승리에는 소환권 1장을 추가로 받습니다.",
             "부재 시간에 따른 방치 보상을 수령했습니다. 복귀할 때 보상창에서 부재 시간과 지급 내역을 확인하고 수령합니다.\n\n홀 → 방치 보상에서 적립 기준을 다시 확인할 수 있습니다. 보상창을 보고 있는 시간에는 추가 적립하지 않습니다."
         };
+        private string GuideText(int index)
+        {
+            if (index < 6) return GuideTexts[index];
+            var stats = index == 6 ? battle.Data.Enemies["boss"] : battle.Data.RoundBoss;
+            string effect = index == 6
+                ? "기본 공격 피해의 회차 배수 + 기절 0.3초"
+                : "기본 공격 피해 + 회차 수만큼 초 단위 출혈\n출혈은 매초 현재 체력의 0.1% 피해입니다.";
+            return "기본 공격 " + (stats.SkillEvery - 1) + "회 → 한 번 쉬며 예고\n다음 공격에 특수 공격을 사용합니다.\n\n" + effect +
+                "\n\n예고는 피해가 없으며 기절·이동 시 공격이 늦어집니다.";
+        }
         private void ResetGuideUI()
         {
             activeGuide = -1; guideReplay = false; guideNotBefore = 0;
@@ -27,6 +38,15 @@ namespace AFKTrial
         private void UpdateGuides()
         {
             if (atTitle || GuideOpen) return;
+            // First boss entry must precede combat, even during the normal guide cooldown.
+            var bossGuide = battle.CurrentBossGuide;
+            if (bossGuide.HasValue && !battle.GuideSeen(bossGuide.Value))
+            {
+                if (!SystemMenuOpen && !showRecruit && !HasPendingIdleReward && !HasDungeonResult &&
+                    !HasBossReview && battle.PendingSummons == null && !editing)
+                { battle.QueueGuide(bossGuide.Value); activeGuide = (int)bossGuide.Value; guideReplay = false; }
+                return;
+            }
             // Existing results always complete first. A short gap also avoids back-to-back guides.
             if (SystemMenuOpen || showRecruit || HasPendingIdleReward || HasDungeonResult ||
                 HasBossReview || battle.PendingSummons != null || battle.ActiveDungeon != null ||
@@ -54,6 +74,7 @@ namespace AFKTrial
         }
         private Rect GuideFocus(int width, int height)
         {
+            if (activeGuide >= 6) return new Rect(6, 4, width - 12, 106 + StageHeaderOffset);
             if (activeGuide == 0 && (!editing || guideReplay)) return new Rect(6, 4, width - 12, 106 + StageHeaderOffset);
             if (editing && !guideReplay)
             {
@@ -81,7 +102,7 @@ namespace AFKTrial
             GUI.BeginGroup(new Rect((width - w) / 2, y, w, h));
             DrawKnightPanel(new Rect(0, 0, w, h));
             CourtHeading(new Rect(20, 12, w - 40, 34), GuideTitles[activeGuide], 23, TextAnchor.MiddleLeft);
-            GUI.Label(new Rect(20, 53, w - 40, 165), GuideTexts[activeGuide],
+            GUI.Label(new Rect(20, 53, w - 40, 165), GuideText(activeGuide),
                 new GUIStyle(small) { fontSize = 17, wordWrap = true });
             GUI.Label(new Rect(20, 213, w - 40, 22), "전투 일시정지 · 도움말에서 다시 볼 수 있습니다.", small);
             if (GUI.Button(new Rect(20, h - 43, (w - 48) / 2, 31), guideReplay ? "도움말로" : "건너뛰기", button))
@@ -96,7 +117,7 @@ namespace AFKTrial
             {
                 string state = battle.GuideSkipped((TrialBattle.Guide)i) ? "건너뜀" :
                     battle.GuideSeen((TrialBattle.Guide)i) ? "확인함" : "미확인";
-                if (GUI.Button(new Rect(26, 102 + i * 45, 412, 38), GuideTitles[i] + " · " + state, button))
+                if (GUI.Button(new Rect(26, 100 + i * 40, 412, 35), GuideTitles[i] + " · " + state, button))
                 { activeGuide = i; guideReplay = true; }
             }
         }

@@ -28,7 +28,7 @@ namespace AFKTrial
                 musicAudio = AddAudioSource(true); combatAudio = AddAudioSource();
                 priorityAudio = AddAudioSource(); uiAudio = AddAudioSource();
                 combatAudio.priority = 160; priorityAudio.priority = 32;
-                hitClip = Resources.Load<AudioClip>("Audio/CombatHit");
+                hitClip = Resources.Load<AudioClip>("Audio/Weapons/Sword");
                 warningClip = Resources.Load<AudioClip>("Audio/BossWarning");
                 specialClip = Resources.Load<AudioClip>("Audio/BossSpecial");
                 rewardClip = Resources.Load<AudioClip>("Audio/Reward");
@@ -38,10 +38,11 @@ namespace AFKTrial
                 if (musicAudio.clip != null) musicAudio.Play();
             }
             if (audioBattle == battle) return;
-            if (audioBattle != null) audioBattle.SoundRequested -= PlayBattleSound;
+            if (audioBattle != null) { audioBattle.SoundRequested -= PlayBattleSound; audioBattle.WeaponSoundRequested -= PlayWeaponSound; }
             audioBattle = battle;
-            if (audioBattle != null) audioBattle.SoundRequested += PlayBattleSound;
+            if (audioBattle != null) { audioBattle.SoundRequested += PlayBattleSound; audioBattle.WeaponSoundRequested += PlayWeaponSound; }
             nextHitSound = suppressHitsUntil = 0;
+            lastWeaponHit.Clear();
         }
         private void LateUpdate()
         {
@@ -65,6 +66,7 @@ namespace AFKTrial
         }
         private void PlayBattleSound(TrialBattle.SoundCue cue)
         {
+            if (cue == TrialBattle.SoundCue.Hit || cue == TrialBattle.SoundCue.BossSpecial) return;
             if (!Application.isPlaying || suspended || effectsVolume <= 0) return;
             EnsureAudio();
             double now = Time.realtimeSinceStartupAsDouble;
@@ -90,7 +92,7 @@ namespace AFKTrial
         }
         private void ReleaseAudio()
         {
-            if (audioBattle != null) audioBattle.SoundRequested -= PlayBattleSound;
+            if (audioBattle != null) { audioBattle.SoundRequested -= PlayBattleSound; audioBattle.WeaponSoundRequested -= PlayWeaponSound; }
             audioBattle = null;
             foreach (var source in new[] { musicAudio, combatAudio, priorityAudio, uiAudio })
                 if (source != null) { source.Stop(); Destroy(source); }
@@ -120,7 +122,7 @@ namespace AFKTrial
             if (GUI.Button(new Rect(26, 251, 200, 36), "효과음 미리 듣기", button))
             {
                 EnsureAudio(); uiAudio.Stop(); uiAudio.volume = draftEffects; uiAudio.pitch = .8f;
-                uiAudio.PlayOneShot(warningClip, .65f);
+                uiAudio.pitch = 1f; uiAudio.PlayOneShot(hitClip, .6f);
             }
             if (GUI.Button(new Rect(238, 251, 200, 36), "음량 저장", button))
                 audioSaveNotice = SetAudioVolumes(draftMusic, draftEffects) ? "음량을 저장했습니다. 재접속 후에도 유지됩니다." : null;

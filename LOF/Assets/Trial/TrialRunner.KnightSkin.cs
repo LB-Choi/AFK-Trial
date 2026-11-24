@@ -230,6 +230,7 @@ namespace AFKTrial
 
         private void OnDestroy()
         {
+            if (portraits != null) foreach (var portrait in portraits) if (portrait != null) Destroy(portrait);
             if (knightSkin != null) Destroy(knightSkin);
             if (courtFont != null) Destroy(courtFont);
             if (koreanFont != null) Destroy(koreanFont);

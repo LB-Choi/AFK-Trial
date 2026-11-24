@@ -198,6 +198,7 @@ namespace AFKTrial
             if (GUI.Button(resume, "전투로 돌아가기   ›", knightSelectedButton))
                 editing = false;
             DrawHallDock(width, height, -1);
+            HandleHallHeroSelection(dockTop);
         }
 
         private void DrawHallKnight(int slot, float center, float baseline, float height, bool behind)
@@ -207,7 +208,8 @@ namespace AFKTrial
             float width = height * art.width / art.height;
             var tint = GUI.color;
             if (behind) GUI.color = new Color32(205, 214, 222, 255);
-            GUI.DrawTexture(new Rect(center - width * 0.5f, baseline - height, width, height), art);
+            hallHeroBounds[slot] = new Rect(center - width * 0.5f, baseline - height, width, height);
+            GUI.DrawTexture(hallHeroBounds[slot], art);
             GUI.color = tint;
         }
 

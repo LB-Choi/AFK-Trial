@@ -62,6 +62,7 @@ namespace AFKTrial
         private void Strike(Unit caster, Unit target, float amount, PendingHit[] hits, bool pierce = false)
         {
             hits[Units.IndexOf(target)].Add(caster, amount, pierce);
+            if (amount > 0) WeaponSoundRequested?.Invoke(caster, true, caster.SpecialAttackPending);
         }
 
         private void BasicStrike(Unit caster, PendingHit[] hits)
@@ -70,6 +71,7 @@ namespace AFKTrial
             int every = caster.Stats.SkillEvery;
             bool special = every > 0 && caster == ActiveBoss && caster.SpecialAttackPending;
             bool bash = special && caster.Stats.Id == "boss";
+            // Retain semantic notifications; playback uses the typed weapon event from Strike.
             SoundRequested?.Invoke(special ? SoundCue.BossSpecial : SoundCue.Hit);
             int round = ActiveStage > 0 ? (ActiveStage - 1) / Data.RoundLength + 1 : 1;
             Strike(caster, target, AttackPower(caster) * (bash ? round : 1), hits);
@@ -108,6 +110,7 @@ namespace AFKTrial
         private void TryCastSkill(Unit caster, PendingHit[] hits)
         {
             var state = caster.Skills;
+            if (Elapsed - caster.SkillStart < 1f || caster.WindingUp || (Elapsed - caster.SwingStart) * caster.SwingSpeed < caster.Stats.AttackDuration) return;
             for (int slot = 0; slot < 3; slot++)
             {
                 var skill = Data.Skills[caster.HeroIndex, slot];
@@ -123,7 +126,13 @@ namespace AFKTrial
                 state.LastCast[slot] = Elapsed;
                 caster.LastSkill = skill.Name;
                 caster.LastSkillTime = Elapsed;
-                Cast(caster, skill.Effect, rank, hits);
+                caster.SkillStart = Elapsed;
+                caster.LastSkillSlot = slot;
+                caster.SkillRank = rank;
+                caster.SkillHit = caster.SkillSwing = 0;
+                caster.SkillTarget = caster.Target;
+                caster.AnimatedSkill = skill.Effect;
+                caster.Walking = false;
                 return;
             }
         }
